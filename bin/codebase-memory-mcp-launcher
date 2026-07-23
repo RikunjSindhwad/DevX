@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+candidates=()
+if [ -n "${CODEBASE_MEMORY_MCP_BIN:-}" ]; then
+  candidates+=("$CODEBASE_MEMORY_MCP_BIN")
+fi
+candidates+=(
+  "$ROOT/.devx/tools/codebase-memory-mcp"
+  "$ROOT/../.local/bin/codebase-memory-mcp"
+  "$HOME/.local/bin/codebase-memory-mcp"
+)
+
+for candidate in "${candidates[@]}"; do
+  if [ -x "$candidate" ]; then
+    exec "$candidate" "$@"
+  fi
+done
+
+if command -v codebase-memory-mcp >/dev/null 2>&1; then
+  exec "$(command -v codebase-memory-mcp)" "$@"
+fi
+
+cat >&2 <<'EOF'
+codebase-memory-mcp binary not found.
+
+Install it with:
+  ${CLAUDE_PLUGIN_ROOT}/bin/install-codebase-memory-mcp
+
+Or install a verified release from:
+  https://github.com/DeusData/codebase-memory-mcp/releases/latest
+
+Then either:
+  - put codebase-memory-mcp on PATH
+  - set CODEBASE_MEMORY_MCP_BIN=/absolute/path/to/codebase-memory-mcp
+  - place it at ${CLAUDE_PLUGIN_ROOT}/.devx/tools/codebase-memory-mcp
+EOF
+exit 127

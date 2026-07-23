@@ -1,0 +1,62 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# DevExpert plugin repo — ignore everything that is NOT part of the published
+# plugin: the dogfood workspace, local settings, derived indexes, and the usual
+# language / editor / OS cruft. Only plugin source ships.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# DevExpert's own working state when it dogfoods itself in this repo.
+# (Coordination files, logs, workstreams, indexes, caches — derived/transient,
+#  never plugin source.)
+.devx/
+
+# Derived vault FTS5 index — rebuilt from vault/**/*.md with `devx index`.
+vault/mdvault-devx.sqlite
+vault/mdvault-devx.sqlite-*
+vault/*.sqlite.bak-*
+
+# Local Claude Code settings (personal, per-machine — not shipped).
+.claude/settings.local.json
+.claude/*.local.json
+
+# Other tools' scratch/agent directories.
+.agents/
+.codex/
+
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+
+# Environment / secrets
+.env
+.env.*
+
+# Logs & scratch
+*.log
+tmp/
+scratch/

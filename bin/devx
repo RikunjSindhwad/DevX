@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# devx — the single agent-facing CLI surface for the DevX plugin.
+#
+#   devx log   TYPE SOURCE "MESSAGE"   # append a typed line to .devx/log.md (pure bash; see below)
+#   devx index [--scope vault|project|all]   # build/refresh the FTS5 index
+#   devx kb_search "QUERY" [--scope vault|project|all] [--limit N]
+#   devx fetch "URL" [--refresh] [--max-chars N]
+#   devx search "QUERY" [--limit N] [--engines duckduckgo,bing,yahoo]
+#   devx github_search "QUERY" [--kind code|repos] [--limit N]
+#   devx validate FILE [--promote-to CAT/NAME.md] [--update] [--offline]   # auto-promote gate
+#   devx handoff_check [PATH | --workstream SLUG --agent NAME]             # continuity gate
+#   devx state check [PATH | --workstream SLUG]                            # state.md consistency gate
+#   devx doctor                                                             # environment preflight gate for /devx:devx-init
+#   devx vault stats [--split-threshold N]                                  # vault layout distribution + split signal (optional accelerator)
+#
+# `log` is implemented inline in bash (no Python, no venv) so lifecycle logging
+# NEVER breaks — even mid-bootstrap or if the venv is wedged. Everything else
+# delegates to scripts/devx_lib.py. This is the whole "runtime": no Docker, no SSH.
+set -euo pipefail
+
+PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export CLAUDE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}"
+
+# ---- log: the 5-line append-only helper (atomic for lines < 4 KiB via O_APPEND) ----
+if [ "${1:-}" = "log" ]; then
+  shift
+  type="${1:?usage: devx log TYPE SOURCE \"MESSAGE\"}"; source="${2:?source required}"; msg="${3:?message required}"
+  mkdir -p .devx
+  printf '[%s] %s %s — %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$type" "$source" "$msg" >> .devx/log.md
+  exit 0
+fi
+
+# ---- everything else: the Python retrieval lib. Runtime is stdlib-only, so an env only matters for the
+# OPTIONAL fetch extras (requests/trafilatura/bs4). Resolution order, isolated-first (never writes to
+# system Python): the uv-managed workspace venv `.devx/.venv` (created by /devx:devx-init) → uv's isolated
+# run → system python3 (last-resort stdlib floor; runs only, installs nothing).
+if [ -x ".devx/.venv/bin/python3" ]; then
+  exec ".devx/.venv/bin/python3" "$PLUGIN_ROOT/scripts/devx_lib.py" "$@"
+elif command -v uv >/dev/null 2>&1; then
+  exec uv run --quiet --no-project --python ">=3.11" python "$PLUGIN_ROOT/scripts/devx_lib.py" "$@"
+else
+  exec python3 "$PLUGIN_ROOT/scripts/devx_lib.py" "$@"
+fi

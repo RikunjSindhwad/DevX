@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+version_url="https://github.com/DeusData/codebase-memory-mcp/releases/latest/download"
+install_dir="${1:-${HOME}/.local/bin}"
+
+case "${1:-}" in
+  -h|--help)
+    cat <<'EOF'
+Usage: install-codebase-memory-mcp [INSTALL_DIR]
+
+Downloads the latest codebase-memory-mcp release, verifies its checksum, and
+installs the binary to INSTALL_DIR/codebase-memory-mcp.
+
+Default INSTALL_DIR: $HOME/.local/bin
+EOF
+    exit 0
+    ;;
+esac
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+os="$(uname -s)"
+arch="$(uname -m)"
+
+case "$os" in
+  Linux) platform="linux" ;;
+  Darwin) platform="darwin" ;;
+  *) echo "Unsupported OS for installer: $os" >&2; exit 2 ;;
+esac
+
+case "$arch" in
+  x86_64|amd64) machine="amd64" ;;
+  arm64|aarch64) machine="arm64" ;;
+  *) echo "Unsupported architecture for installer: $arch" >&2; exit 2 ;;
+esac
+
+if [ "$platform" = "linux" ]; then
+  asset="codebase-memory-mcp-${platform}-${machine}-portable.tar.gz"
+else
+  asset="codebase-memory-mcp-${platform}-${machine}.tar.gz"
+fi
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl is required to download codebase-memory-mcp" >&2
+  exit 2
+fi
+
+curl -fsSL "$version_url/checksums.txt" -o "$tmp/checksums.txt"
+curl -fsSL "$version_url/$asset" -o "$tmp/$asset"
+
+grep "  $asset\$" "$tmp/checksums.txt" > "$tmp/$asset.sha256"
+if command -v sha256sum >/dev/null 2>&1; then
+  (cd "$tmp" && sha256sum -c "$asset.sha256")
+elif command -v shasum >/dev/null 2>&1; then
+  expected="$(cut -d ' ' -f1 "$tmp/$asset.sha256")"
+  actual="$(shasum -a 256 "$tmp/$asset" | cut -d ' ' -f1)"
+  [ "$expected" = "$actual" ] || { echo "checksum mismatch for $asset" >&2; exit 1; }
+else
+  echo "sha256sum or shasum is required to verify codebase-memory-mcp" >&2
+  exit 2
+fi
+
+tar -xzf "$tmp/$asset" -C "$tmp"
+binary="$(find "$tmp" -type f -name codebase-memory-mcp -perm -111 | head -n 1)"
+if [ -z "$binary" ]; then
+  echo "Downloaded archive did not contain executable codebase-memory-mcp" >&2
+  exit 1
+fi
+
+mkdir -p "$install_dir"
+cp "$binary" "$install_dir/codebase-memory-mcp"
+chmod +x "$install_dir/codebase-memory-mcp"
+"$install_dir/codebase-memory-mcp" --version
+
+cat <<EOF
+Installed: $install_dir/codebase-memory-mcp
+
+If your shell does not include this directory on PATH, either add it to PATH or set:
+  CODEBASE_MEMORY_MCP_BIN=$install_dir/codebase-memory-mcp
+EOF

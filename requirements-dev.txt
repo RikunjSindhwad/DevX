@@ -1,0 +1,4 @@
+# Dev/test dependencies for the DevX plugin's own test suite.
+# Runtime is stdlib-only (Python 3.11+, sqlite3 with FTS5 probed). These are for `pytest`.
+pytest>=8.0
+coverage>=7.0    # optional: `coverage run --source=scripts -m pytest && coverage report` (lib coverage)

@@ -1,0 +1,23 @@
+{
+  "name": "robensive",
+  "description": "DevExpert — a file-native, graph-engineered SDLC plugin for Claude Code: an Opus orchestrator plans, builds (TDD), reviews, documents, and ships through specialized agents coordinating via durable .devx/ files.",
+  "owner": {
+    "name": "Robensive",
+    "url": "https://robensive.in"
+  },
+  "plugins": [
+    {
+      "name": "devx",
+      "source": "./",
+      "description": "DevExpert — hands-off, multi-agent, graph-engineered software delivery for Claude Code. An Opus orchestrator plans, builds (TDD), reviews, documents, and ships through specialized agents coordinating via durable .devx/ files.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Rikunj Sindhwad",
+        "url": "https://robensive.in"
+      },
+      "license": "MIT",
+      "homepage": "https://github.com/RikunjSindhwad/DevX",
+      "repository": "https://github.com/RikunjSindhwad/DevX"
+    }
+  ]
+}

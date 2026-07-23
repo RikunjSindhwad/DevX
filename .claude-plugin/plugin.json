@@ -1,0 +1,33 @@
+{
+  "name": "devx",
+  "description": "Multi-agent software delivery for repositories with a discoverable build and verification workflow. An Opus orchestrator dispatches specialized Sonnet and Haiku agents that design, plan, build, review, document, and ship through durable .devx/ files and an FTS5-indexed knowledge vault.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Rikunj Sindhwad",
+    "email": "sindhwadrikunj@gmail.com",
+    "url": "https://robensive.in"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/RikunjSindhwad/DevX",
+  "repository": "https://github.com/RikunjSindhwad/DevX",
+  "keywords": ["development", "multi-agent", "orchestrator", "tdd", "code-review", "knowledge-vault", "fts5"],
+  "userConfig": {
+    "vault_path": {
+      "type": "directory",
+      "title": "Knowledge vault directory",
+      "description": "Override the bundled curated dev-knowledge vault with a larger shared one. Leave empty to use the plugin's vault/."
+    },
+    "base_branch": {
+      "type": "string",
+      "title": "Default base branch for PRs",
+      "description": "Branch that workstream PRs target.",
+      "default": "main"
+    },
+    "github_token": {
+      "type": "string",
+      "title": "GitHub token (optional)",
+      "description": "Used for github_search code search if the gh CLI is not authenticated. Stored in the system keychain where supported, otherwise in Claude Code's credentials store.",
+      "sensitive": true
+    }
+  }
+}

@@ -19,10 +19,11 @@ environment-specific and not pinned here).
 
 Five claims drive every choice:
 
-1. **Files on disk are the shared brain.** Sub-agents are fresh every call — no memory, no chat
-   history, only their system prompt + CWD. So continuity lives in `.devx/` (an append-only log, a
-   running plan, and **summarized handoffs**), never in a growing conversation. **Reset beats
-   compaction.**
+1. **Files on disk are the shared brain.** Initial maker/checker lineages start isolated. Within the
+   same Claude session, a bounded revision resumes the exact author/implementer and producing checker so
+   they can patch/recheck without remapping; every round rereads disk. Durable continuity still lives in
+   `.devx/` (append-only log, plans, and **immutable summarized handoffs**), never in an ephemeral agent id.
+   Fresh fallback at a session/scope boundary is lossless because files remain canonical.
 2. **The orchestrator is the only DevX dispatcher.** Current Claude Code can allow nested sub-agent
    dispatch, but DevX role agents intentionally omit the `Agent` tool. The orchestrator owns phase-level
    fan-out, joins, and write-conflict checks.
@@ -71,7 +72,7 @@ Grounded in the real files under `web-pentest-expert-v3/` (and its `V3-PLAN.md` 
 | Use model aliases | `opus`/`sonnet`/`haiku` in frontmatter; opus escalation via dispatch-time override |
 | `${CLAUDE_PLUGIN_ROOT}` anchors plugin files | Used everywhere for in-plugin refs; `.devx/` is relative to the repo CWD |
 
-Compatibility baseline: the current files and strict plugin validation target Claude Code **2.1.218**.
+Compatibility baseline: the current files and strict plugin validation target Claude Code **2.1.229**.
 Revalidate when upgrading the host because hook, skill, and sub-agent schemas evolve.
 
 ### From the FTS5/retrieval comparison — see §9.
@@ -105,16 +106,18 @@ devx/                                  # ${CLAUDE_PLUGIN_ROOT}
 │   ├── review/reviewer.md             # sonnet (opus: high-risk/complex phase — CHECK role) — independent review
 │   ├── security/security.md           # sonnet (opus: critical) — independent security review (per-phase verify band + whole-system pre-ship pass)
 │   ├── docs/docs.md                   # sonnet — docs sync + (gated) vault curation
-│   ├── ui/browser.md                  # sonnet — UI verify/debug via generated Playwright-Python (opt-in)
+│   ├── ui/browser.md                  # sonnet — rendered UI verify/debug when a phase changes UI
 │   └── vcs/git.md                     # haiku — exclusion, branch/commit/PR, destructive gates
 ├── references/                        # the plugin's OWN rules (single-sourced — anti-F1)
 │   ├── agent-guide.md                 # the agent contract (logging, handoff, errors, help, retrieval)
 │   ├── orchestrator-guide.md          # dispatch, gates, resume, reasoning, build loop, git
 │   ├── code-standards.md              # language-agnostic quality bar
 │   ├── architecture-principles.md     # modular/easy-to-change principles
+│   ├── ui-design.md                   # Product Interface Direction + rendered design-quality contract
 │   └── contracts/                     # canonical policy fragments (pointed-to, never restated):
 │       ├── phase-verification.md      #   severity tiers, verify-band sequence, fix, floor, commit gate
-│       └── plan-check.md              #   plan-CHECK owner/challenges/verdict, dep reconciliation, re-baseline
+│       ├── plan-check.md              #   plan-CHECK owner/challenges/verdict, dep reconciliation, re-baseline
+│       └── diagnosability.md          #   runtime-shaped evidence, correlation, safe logs-to-plan diagnosis
 ├── tools-guide/                       # how-to manuals; volatile version facts are rechecked
 │   ├── index.md
 │   ├── native/{devx-cli, kb_search, git}.md
@@ -126,7 +129,7 @@ devx/                                  # ${CLAUDE_PLUGIN_ROOT}
 ├── .mcp.json                          # plugin-provided codebase-memory-mcp server
 ├── scripts/devx_lib.py                # thin CLI router (argparse + dispatch + re-exports; no business logic)
 │   └── lib/                           # config, probes, retrieval, fetch/, github, validate, handoff, vault, doctor, state_check
-├── hooks/{hooks.json, guard.sh, model_guard.py, token_monitor.py, _python.sh}  # model_guard PreToolUse hook (wired); token_monitor PostToolUse hook (wired)
+├── hooks/{hooks.json, guard.sh, model_guard.py, token_monitor.py, _python.sh}  # model_guard PreToolUse; token_monitor SubagentStop (incl. continuations)
 └── vault/                             # curated SWE knowledge, FTS5-indexed (seeded small; grows)
     ├── mdvault-devx.sqlite            # DERIVED index (git-ignored; `devx index`)
     └── languages/ frameworks/ patterns/ testing/ security/ performance/ packages/ ops/   # + emergent one-level sub-folders as a category grows
@@ -163,7 +166,7 @@ merges concatenate.
 │   ├── phases/<NN>-<slug>/
 │   │   ├── plan.md            # JIT per-phase plan: tasks + acceptance criteria
 │   │   ├── plan-check.md      # independent phase-plan critique
-│   │   ├── research/          # per-phase researcher output
+│   │   ├── research/          # per-phase research + bounded, source-grounded log-diagnosis.md when used
 │   │   ├── review.md          # reviewer verdict for this phase
 │   │   ├── gui.md             # ui:browser verify output (when applicable)
 │   │   ├── security.md        # security agent verdict (when applicable)
@@ -192,7 +195,7 @@ proceeds. Standing references (`orchestrator-guide.md`, etc.) are read on demand
 | 00 attach | locate/create `.devx/`, git exclusion, scout, start-vs-resume | **Workstream + mode** (always) |
 | 01 design *(opt)* | brainstorm mode: stack/packages/tradeoffs → `decisions.md`; architect mode: modular structure → `architecture.md` | **Direction / Architecture** (when run) |
 | 03 plan | brief+arch → `goal.md` (north star, gated once) + `roadmap.md` (coarse phase map, one line/phase) | **Goal & scope** (always) |
-| 04 build | **per-phase loop**: for each roadmap phase → JIT plan (designer+researcher fan-out) → implement (reuse-first) → sequenced verify band (reviewer first; then ui:browser if UI + security/full-route) → bounded fix per rejected return (correctness floor → operator gate; never ship broken) → docs + `phases/{NN}-{slug}/summary.md` → commit → plan next phase | only on ambiguity / scope change / floor failure |
+| 04 build | **per-phase loop**: JIT plan → implement (reuse-first + runtime-shaped diagnostics) → independent verify band → resume owning maker for bounded patch → resume producing checker for full recheck (fresh fallback on boundary) → docs/summary → commit → next phase; logs/crashes route through bounded source diagnosis | only on ambiguity / scope change / floor failure |
 | 05 document | final coherence pass | none (auto) |
 | 06 ship | branch/commits/PR + vault curation (default-on, gated) | **Ship + curate** (always) |
 
@@ -244,14 +247,14 @@ The orchestrator is a skill (Opus). Nine sub-agents, each mapping to a required 
 
 | Agent | Model | Base tools and enumerated MCP access | Reads | Trigger |
 |---|---|---|---|---|
-| `recon:scout` | **haiku** | Read, Grep, Glob, Bash + read-only graph tools | agent-guide | attach / resume |
+| `recon:scout` | **haiku** | Read, Grep, Glob, Bash + read-only graph tools | agent-guide, diagnosability | attach/resume repo map; bounded logs-to-source diagnosis |
 | `design:designer` | **sonnet** *(opus: high-judgment design/plan cases in §6)* | Read, Write, Edit, Grep, Glob, Bash, WebSearch + read-only graph tools | agent-guide, architecture-principles, code-standards, vault/packages, vault/patterns | greenfield / new feature / structure refresh; modes: `brainstorm` \| `architect` \| `plan` |
 | `research:researcher` | **sonnet** | Read, Write, Edit, Grep, Glob, Bash, WebSearch + read-only graph tools | agent-guide | "requesting help" / gaps (fan-out) |
 | `build:implementer` | **sonnet** | Read, Write, Edit, Grep, Glob, Bash + read-only graph tools | agent-guide, code-standards, plan, tools-guide | per plan task |
 | `review:reviewer` | **sonnet** *(opus: check — prompt-constrained read-only)* | Read, Write, Grep, Glob, Bash + read-only graph tools | agent-guide, code-standards, plan, vault/security | per-phase verify band |
 | `security:security` | **sonnet** *(opus: critical/deep; prompt-constrained read-only)* | Read, Write, Grep, Glob, Bash + read-only graph tools | agent-guide, code-standards, vault/security | per-phase verify band + whole-system pre-ship pass |
 | `docs:docs` | **sonnet** | Read, Write, Edit, Grep, Glob, Bash + read-only graph tools | agent-guide, code-standards, vault/README | after review / gated curation |
-| `ui:browser` | **sonnet** | Read, Write, Edit, Grep, Glob, Bash | agent-guide, tools-guide/native/playwright | UI verification/debug (opt-in) |
+| `ui:browser` | **sonnet** | Read, Write, Edit, Grep, Glob, Bash | agent-guide, ui-design, tools-guide/native/playwright | rendered UI verification/debug when a phase changes UI |
 | `vcs:git` | **haiku** | Read, Write, Edit, Grep, Glob, Bash | agent-guide, tools-guide/native/git | branch/commit/PR/exclusion |
 
 The frontmatter list controls which base tools exist for an agent; it cannot express path- or
@@ -270,9 +273,9 @@ judgment output—but not code, tests, app configuration, migrations, or runtime
   under `.devx/`.
 - **MAKE** — sonnet implementer writes code, tests, and docs. Haiku handles VCS plumbing and repo
   scouting.
-- **CHECK** — opus reviewer (independent, read-only, fresh context) judges the output against
-  pre-committed criteria. No source edit, ever. This is the anti-flattery rail.
-- **FIX** — sonnet implementer gets one fix pass for the current rejected verification return. If the
+- **CHECK** — an initially separate opus/sonnet reviewer lineage (independent, read-only) judges against
+  pre-committed criteria, then may resume for patch closure. No source edit, ever. This is the anti-flattery rail.
+- **FIX** — the owning sonnet implementer resumes for one fix pass on the current rejected return. If the
   floor is not met after that pass, the operator gates. There is no 2-strike debug pass and no automatic
   opus retry escalation — the bounded fix-pass rule + the floor replace them.
 

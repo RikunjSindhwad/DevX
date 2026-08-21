@@ -12,7 +12,7 @@ A FINAL documentation coherence pass before ship. Docs were already synced **per
    the phase summaries (`phases/*/summary.md`) + the full diff so the agent reconciles README,
    `.devx/architecture.md`, and any API/usage docs **across all phases**, verifies every example/command
    actually works, and kills any cross-phase stale reference. This coherence pass writes **no** phase
-   summary — it only reconciles the top-level docs. Use a fresh exact
+   summary — it only reconciles the top-level docs. Use a new exact
    `return_as={NN}-docs-coherence.md`.
 2. **Distill DevX/process learnings.** If `.devx/learnings.md` gained entries this workstream, dispatch
    `devx:docs:docs` in **distill** mode to refresh `.devx/learnings-index.md` (cluster prompt,

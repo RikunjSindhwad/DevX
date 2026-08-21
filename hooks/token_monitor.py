@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """DevX hook: token-usage / cost tracker.
 
-Reads the PostToolUse hook event JSON from stdin, parses the session transcript JSONL (plus any
-sub-agent transcripts), and emits a per-model cost breakdown table via `systemMessage`.
+Reads a SubagentStop hook event JSON from stdin, parses the session transcript JSONL (plus any
+sub-agent transcripts), and emits per-model plus per-agent/continuation usage via `systemMessage`.
 
-Fires on: PostToolUse for sub-agent dispatches — so after every agent call you see the cost so far.
+Fires on: SubagentStop — including a completed `SendMessage` continuation.
 Stdlib-only (json/re/sys/pathlib); safe to run with plain `python3`.
 """
 from __future__ import annotations
@@ -223,6 +223,38 @@ def parse_usage(jsonl_path: Path) -> dict:
     return totals
 
 
+def count_rounds(jsonl_path: Path) -> int:
+    """Count initial/resumed direct prompts, excluding tool-result messages.
+
+    A continued subagent keeps one JSONL transcript. Each initial assignment or SendMessage continuation
+    adds a user message with text; tool results are also user-role messages but contain only tool_result
+    blocks and therefore are not rounds.
+    """
+    if not jsonl_path.is_file():
+        return 0
+    rounds = 0
+    with open(jsonl_path) as f:
+        for line in f:
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            msg = obj.get("message")
+            if not isinstance(msg, dict) or msg.get("role") != "user":
+                continue
+            content = msg.get("content")
+            if isinstance(content, str) and content.strip():
+                rounds += 1
+            elif isinstance(content, list) and any(
+                isinstance(block, dict)
+                and block.get("type") in {"text", "input_text"}
+                and str(block.get("text", "")).strip()
+                for block in content
+            ):
+                rounds += 1
+    return rounds
+
+
 def collect_subagents(session_dir: Path) -> list[dict]:
     sa_dir = session_dir / "subagents"
     if not sa_dir.is_dir():
@@ -240,6 +272,7 @@ def collect_subagents(session_dir: Path) -> list[dict]:
         usage["agent_id"] = agent_id
         usage["agent_type"] = meta.get("agentType", "unknown")
         usage["description"] = meta.get("description", "")
+        usage["rounds"] = count_rounds(jsonl_path)
         agents.append(usage)
     return agents
 
@@ -314,6 +347,31 @@ def build_table(main_usage: dict, subagents: list[dict]) -> str:
         lines.append(f"{BOLD}{GREEN}{row('total', grand)}{RESET}")
     elif not used_models:
         lines.append("No token usage found.")
+
+    used_agents = [
+        agent for agent in subagents
+        if agent.get("input_tokens") or agent.get("output_tokens") or agent.get("cache_read")
+        or agent.get("cache_write_5m") or agent.get("cache_write_1h")
+    ]
+    if used_agents:
+        agent_hdr = f"{'Subagent':24s} {'ID':>8s} {'Rounds':>6s} {'Msgs':>5s} {'Cache%':>7s} {'Cost':>9s}"
+        lines.extend(["", f"{DIM}continuity by subagent{RESET}", f"{DIM}{agent_hdr}{RESET}",
+                      f"{DIM}{'-' * len(agent_hdr)}{RESET}"])
+        for agent in used_agents:
+            agent_type = str(agent.get("agent_type") or "unknown")
+            parts = agent_type.split(":")
+            label = ":".join(parts[-2:]) if len(parts) > 1 else agent_type
+            agent_id = str(agent.get("agent_id") or "unknown")[-8:]
+            total_input = (
+                agent.get("input_tokens", 0) + agent.get("cache_read", 0)
+                + agent.get("cache_write_5m", 0) + agent.get("cache_write_1h", 0)
+            )
+            cache_pct = 100 * agent.get("cache_read", 0) / total_input if total_input else 0.0
+            cost = f"${agent.get('cost_usd', 0.0):.2f}"
+            lines.append(
+                f"{CYAN}{label[:24]:24s} {agent_id:>8s} {agent.get('rounds', 0):>6d} "
+                f"{fmt(agent.get('messages', 0)):>5s} {cache_pct:>6.1f}% {cost:>9s}{RESET}"
+            )
     return "\n".join(lines)
 
 

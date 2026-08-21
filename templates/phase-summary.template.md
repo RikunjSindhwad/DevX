@@ -18,5 +18,9 @@ The next phase's planner reads THIS (a pointer), not the whole phase. Keep it ti
 ## Verification
 {tests/criteria status (actual result); GUI result if any; security verdict; Evidence checkpoint}
 
+## Diagnostics surface
+{shape; how verbosity is raised; where structured events go; schema/error-code version; correlation
+support; exact redaction/correlation/exception/live evidence run — or N/A with a specific non-runnable reason}
+
 ## For the next phase
 {what the next phase should build on / avoid; any drift from the roadmap and how it was reconciled}

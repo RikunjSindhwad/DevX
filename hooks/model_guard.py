@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""PreToolUse model-budget guard for Agent dispatches — the pre-dispatch counterpart to the
-PostToolUse token_monitor (which can only report cost AFTER the spend). It enforces
+"""PreToolUse model-budget guard for initial Agent dispatches — the pre-dispatch counterpart to the
+SubagentStop token_monitor (which reports cost after initial and resumed rounds). It enforces
 orchestrator-guide §6: the entire opus-escalation budget is reviewer / designer / security.
 If the orchestrator passes an opus model override for any OTHER agent, this blocks the dispatch
 before it spends and tells it to re-read §6.

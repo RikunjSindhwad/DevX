@@ -48,19 +48,26 @@ At attach/resume, establish and log the target contract before scouting, code-gr
 - `CURRENT_CWD`: `pwd`.
 - `GIT_ROOT`: `git rev-parse --show-toplevel`, or `none` if the repo is not initialized yet.
 - `WORKSTREAM`: the active `.devx/workstreams/{slug}`.
+- `CODEMAP_PROJECT`: the matching `codebase-memory-mcp` project, or `N/A`.
 
 If the operator's intended repo, `CURRENT_CWD`, and `GIT_ROOT` disagree, stop at an operator gate instead
 of continuing in the wrong repo. If the repo is empty or only has `.devx/`, do not run a normal scout or
 duplicate audit; record that it is an empty/new repo and switch to greenfield planning.
 
-Every dispatch brief must include `TARGET_REPO`, `CURRENT_CWD`, `GIT_ROOT`, `WORKSTREAM`, and whether
-code-graph use is expected. Agents must verify this against their live context using `agent-guide.md` §0.
+Verify the matching graph once per attach/resume with `list_projects`/`index_status`; do not make every
+subagent repeat health-only calls. Every dispatch brief must include the target contract plus exactly one:
+
+- `Code-graph use: required` — brownfield planning, new abstractions/shared types, or review/security blast radius.
+- `Code-graph use: fallback` — the matching graph is unavailable, empty, or stale; use live search and say why.
+- `Code-graph use: N/A — {reason}` — exact/static/docs/browser/git work with no structural discovery.
 
 ---
 
 ## §2 — Dispatch
 
-- Dispatch via the **Agent** tool: `Agent(subagent_type="devx:<role>:<name>", …)`.
+- Start a role agent via **Agent**: `Agent(subagent_type="devx:<role>:<name>", …)`. Continue an eligible
+  completed role agent via **SendMessage** under §2a; do not create a replacement merely because a
+  bounded revision or finding-closure round began.
 - **Use the right wait mode.** Foreground is for dependency barriers: you need this handoff before the next
   decision or source mutation. Background is for independent work you can overlap: research spikes,
   docs/summaries, non-blocking audits, next-phase prep, and other read-only or disjoint-write work. A
@@ -87,8 +94,13 @@ code-graph use is expected. Agents must verify this against their live context u
   the next roadmap phase has independent research questions, or docs can summarize already-stable artifacts,
   start that work as background dispatch with disjoint write paths. Join it before the phase plan consumes
   it.
-- Each agent is a **fresh context** with no memory of prior runs or the main chat — everything it needs
-  comes from its dispatch brief (file paths) and the files on disk.
+- Every **initial** maker and checker starts with an isolated context and no main-chat history. An eligible
+  revision/recheck may resume that same lineage under §2a. In both cases, the brief carries paths and the
+  agent must reread current disk state; remembered file contents are never authoritative.
+- **Carry code discovery explicitly.** Include `CODEMAP_PROJECT` and the `required | fallback | N/A` choice
+  in every brief. Never write `optional`: ambiguity silently turns a required reuse/blast-radius check into
+  a skip. A `required` brief tells the agent to make a focused MCP search its first source-discovery action
+  and then confirm against the live tree.
 - **Allocate the expected handoff before dispatch** using the `{NN}-{agent}-{task}.md` convention
   (e.g. `return_as: 03-implementer-add-login.md`). Confirm
   `.devx/workstreams/{slug}/handoffs/{return_as}` does **not** already exist, include `return_as` in the
@@ -107,6 +119,41 @@ code-graph use is expected. Agents must verify this against their live context u
 
 ---
 
+## §2a — Continuity-aware revision and recheck
+
+Claude subagent continuation is a **same-session optimization**, not durable state. Keep the initial
+independence boundary, then resume each side of it for its own bounded follow-up:
+
+- **Plan/design revision:** resume the exact designer that authored the current design, roadmap, or phase
+  plan. Resume the exact producing plan-CRITIC to recheck the revised artifact.
+- **Code fix:** assign each finding to the original task owner from its criterion/files. Resume that
+  implementer when the finding is local to its ownership. Disjoint owners may each take their assigned
+  findings once; overlapping writes stay sequential. If ownership is ambiguous or the fix crosses several
+  owners/interfaces, use one fresh designated fixer with the full validated handoff set.
+- **Finding closure:** resume the exact reviewer/security/browser agent that produced the findings. It
+  remains independent from the maker. It must rerun the full applicable gate and touched blast-radius
+  scan, not merely inspect the named lines.
+
+Every continuation brief contains: a **new absent `return_as`**, the prior handoff/finding artifact paths,
+the current diff base, changed paths, finding IDs, and the exact recorded commands to rerun. It explicitly
+orders the agent to reread current files/diff. The resulting handoff records
+`Continuity: resumed — {prior handoff}`; never overwrite an earlier handoff or erase an earlier verdict.
+Rechecks append a round to the owning `plan-check.md`/`review.md`/`security.md`/`gui.md` and classify every
+prior finding `FIXED | SURVIVES | REGRESSION`.
+
+Use a **fresh fallback** (`Continuity: fresh-fallback — {reason}`) when the agent id is unavailable, the
+Claude session changed, continuation fails/cannot be resumed, the prior agent was cancelled, the work
+moved to another phase/unrelated responsibility, ownership is ambiguous, or the patch materially changes
+scope, architecture, public interfaces, or acceptance criteria. A broadened patch gets a fresh regression
+checker; a localized patch does not pay that cost by default. End continuity when the phase closes.
+
+Never persist an ephemeral agent id as canonical `.devx/` state. Files and immutable handoffs remain the
+cross-session/cross-machine memory; inability to resume only selects the fresh fallback and never blocks
+delivery. This policy changes **who** performs the already-bounded revise/fix/recheck, not the number of
+allowed loops or the correctness floor.
+
+---
+
 ## §3 — After every return
 
 1. **Verify the exact handoff exists** (non-negotiable — a missing handoff breaks resume, the run's only
@@ -118,13 +165,15 @@ code-graph use is expected. Agents must verify this against their live context u
    return. The command confirms the file exists, is non-empty, and has all six sections + a Status line;
    it **exits non-zero** if not. For a fan-out, validate every logged `return_as` path before consuming any
    sibling result. On failure, do **not** proceed — first probe whether that exact dispatch was cancelled or
-   is still running; otherwise re-dispatch the missing agent (clean context, same brief, a new unique
-   `return_as`) to write a proper handoff. An agent that "finished" without a valid handoff has not finished.
+   is still running; otherwise resume that exact agent under §2a when eligible, or use a fresh fallback,
+   always with the same brief and a new unique `return_as`, to write a proper handoff. An agent that
+   "finished" without a valid handoff has not finished.
 2. **Enforce the Evidence Checkpoint**: inspect the handoff's Verification section before trusting it.
    It must contain `Evidence checkpoint:` tied to a concrete artifact/result/source and a clear reasoning
    update: confirmed, revised, or invalidated. Generic lines like "all good", "followed the plan",
-   "made changes", or "looks fine" are incomplete handoffs. Re-dispatch the same agent with the same
-   brief and ask it to rewrite the handoff with a real checkpoint; do not proceed on stale reasoning.
+   "made changes", or "looks fine" are incomplete handoffs. Resume the same agent under §2a when
+   eligible (fresh fallback otherwise) and ask it to write a compact replacement handoff with a real
+   checkpoint; do not proceed on stale reasoning.
    This is now also enforced mechanically — `devx handoff_check` exits non-zero when the `Evidence checkpoint:` line is missing or hollow ("all good"/"looks fine"), so a bad checkpoint auto-fails the gate and re-dispatches — but still read it for substance.
    Also inspect `line_warn`: new handoffs over 120 lines are too verbose for feed-forward. Ask the same
    agent to rewrite a compact replacement handoff before passing it downstream unless the extra detail is
@@ -187,7 +236,7 @@ and gates.
 
 ---
 
-## §5 — Resume (files, never chat history)
+## §5 — Durable resume (files are canonical)
 
 To resume, read **only** files:
 
@@ -201,8 +250,9 @@ To resume, read **only** files:
    `devx handoff_check .devx/workstreams/{slug}/handoffs/{return_as}` before trusting it.
 5. Run `devx state check --workstream {slug}` — it flags a `state.md` that says COMPLETE while phases are still PAUSED/NOT-STARTED (a contradiction that corrupts resume). Resolve any `status_drift` (finish the phase, or correct the status) before acting on `state.md`.
 
-Reconstruct position from those, confirm with the operator (gate), and continue. A crash, a new
-machine, or a fresh clone loses nothing that wasn't on disk.
+Reconstruct position from those, confirm with the operator (gate), and continue. If the same Claude
+session still exposes an eligible agent lineage, §2a may reuse it after this reconstruction; otherwise
+fresh fallback is normal. A crash, new machine, or fresh clone loses nothing that was written to disk.
 
 **Probe before repeating side effects.** Resume does not blindly replay the NEXT ACTION. First inspect
 the durable outcome the action should have produced: the exact `return_as` handoff for a dispatch,
@@ -272,12 +322,12 @@ sonnet writes product source; haiku does plumbing — opus never mutates product
 
 1. **PROPOSE / DESIGN (opus, product-source read-only).** You (the orchestrator, opus) reason over the step and hand the maker a
    precise brief: the approach, the areas to weigh, what "good" looks like. For a hard phase plan or a
-   complex implementation, dispatch a **fresh opus designer/reasoner** (clean context) instead of reasoning
+   complex implementation, dispatch an **initial opus designer/reasoner** (clean context) instead of reasoning
    inline, so the direction is thought through without bloating your context. The orchestrator and an opus
    designer may write only the `.devx/` judgment artifacts described in §6, never product source.
 2. **MAKE (sonnet).** A sonnet maker (designer / implementer / docs) executes the brief and **writes** the
    artifact.
-3. **CHECK (opus, read-only, INDEPENDENT).** A fresh-context checker (reviewer / security) — **default sonnet; escalate to opus per §6** — judges the
+3. **CHECK (opus, read-only, INDEPENDENT).** An initially clean checker lineage (reviewer / security) — **default sonnet; escalate to opus per §6** — judges the
    artifact against the **pre-committed acceptance criteria** — it must **not** see the PROPOSE rationale,
    or it is grading its own plan (the §8 independence rule). Same model, deliberately separate, ignorant
    contexts.
@@ -303,9 +353,9 @@ seen the PROPOSE/planning rationale, or it is grading its own plan.
 A plan can't be self-graded by the same context that produced it — independence (§8) covers **planning**,
 not only code. Before the phase moves to MAKE/implement, run a plan-CHECK:
 
-- **Who.** A fresh-context agent that did **not** see the planning rationale. **Reuse an existing
-  agent — do not invent a new one.** Use a **fresh `devx:design:designer`** running its **plan-CRITIC
-  sub-behavior** (a second, ignorant designer context); it's in the `model_guard` opus allowlist, so
+- **Who.** An initial clean-context agent that did **not** see the planning rationale. **Reuse an existing
+  role — do not invent a new one.** Use a separate `devx:design:designer` running its **plan-CRITIC
+  sub-behavior** (a second, independent designer lineage); it's in the `model_guard` opus allowlist, so
   escalate to opus per §6 for greenfield, GUI, architecture, security-critical, concurrency/device/hardware,
   or otherwise high-risk phases. Hand it the goal, roadmap, and the `phases/{NN}-{slug}/plan.md` — **not**
   the PROPOSE brief. (The reviewer stays a pure code-checker; the designer owns plan-CRITIC.)
@@ -313,9 +363,10 @@ not only code. Before the phase moves to MAKE/implement, run a plan-CHECK:
   rule, missing prerequisites, weak/missing-negative-path criteria, oversized/overlapping tasks, missing
   interface decomposition, missing risk-tags / visual criteria, unlogged re-baseline, goal mismatch) — the
   canonical list; do not re-state it here.
-- **Verdict.** ACCEPT or REVISE. A REVISE returns to the designer for **one** revise loop, then the
-  revised plan proceeds (escalate to the operator gate at stage 03 if a blocking concern survives the
-  loop — e.g. the only fix is a scope/roadmap change).
+- **Verdict.** ACCEPT or REVISE. A REVISE resumes the authoring designer for **one** revise loop, then
+  resumes the producing critic to recheck under §2a. Use a fresh fallback if continuation is unavailable
+  or the revision materially re-baselines scope/architecture/criteria. Escalate to the operator gate at
+  stage 03 if a blocking concern survives the loop.
 - **Log it.** `devx log DECISION orchestrator "phase {P} plan-check: {checker} → ACCEPT|REVISE ({why})"`.
 
 This is the planning analogue of the §7 verify band: the planner can't self-approve. Cross-phase
@@ -352,25 +403,26 @@ The build stage is a loop over the `roadmap.md` phases — each phase a full min
 1. **Plan the phase JIT** — opus directs; **designer** (sonnet) writes `phases/{NN}-{slug}/plan.md` from the goal,
    roadmap, and **all prior phase summaries**; dispatch **researcher**(s) (fan-out) for the phase's unknowns.
    Reconcile cross-phase dependencies (§6c) while planning.
-1a. **Plan-CHECK (independent)** — run §6b: a fresh-context **designer** (plan-CRITIC sub-behavior) that did **not** see
+1a. **Plan-CHECK (independent)** — run §6b: an initially clean **designer** lineage (plan-CRITIC sub-behavior) that did **not** see
    the planning rationale challenges the plan → ACCEPT or REVISE (one revise loop back to the designer).
    Implementation does not start on a plan that hasn't been ACCEPTed (or revised then accepted).
 2. **Implement** — **implementer** (sonnet), following `agent-guide.md` §3 reuse-before-create discovery
    whenever the task creates a new code abstraction or dependency.
-3. **Verify band (sequenced, each checker independent in a fresh context)** — run the verification
+3. **Verify band (sequenced, each initial checker independent from the maker)** — run the verification
    **stages in order**, with only the stable-diff UI/security pair parallelized, so those checkers never
    audit code a pending functional review will rewrite:
    1. **Functional code review (3a)** — **reviewer** (functional + live-verify). Fix and re-review
       functional findings before continuing.
    2. **Stable-diff checks (3b)** — once 3a passes, run **ui:browser** (only if a UI changed) and
       **security** (full data-flow route) in parallel.
-   3. **Consolidated 3b fix + fresh regression** — apply the UI/security finding set once, then
-      re-dispatch the producing checkers and a fresh functional reviewer.
+   3. **Consolidated 3b fix + regression** — apply the UI/security finding set once, resume the producing
+      checkers, and resume the functional reviewer when the patch stays localized. Use a fresh regression
+      reviewer only when §2a's broadened-scope fallback applies.
    4. **Durable-state update.**
    **Security may run earlier** (concurrent with or before code review) **only for a security-critical
    phase** with high early-design risk.
-4. **Fix ×1 per verification return + re-verify** — **implementer** applies the current finding set,
-   then **re-verifies with the producing checker or checkers** in a clean context — never the
+4. **Fix ×1 per verification return + re-verify** — resume the owning **implementer** for its current
+   finding set when §2a permits, then **resume the producing checker or checkers** — never the
    orchestrator self-checking, so independence (§8) holds through the fix loop. Apply the
    **`[IMPORTANT]` rule** on every return: each `[IMPORTANT]`
    finding is **fixed**, **downgraded with evidence**, or **deliberately deferred with a reason + a
@@ -412,16 +464,17 @@ verify-band checkers and the plan-CHECK (§6b) never see the planning rationale.
 
 ## §8 — Independence
 
-Independence covers **PLANNING as well as code** — a plan cannot be self-graded by the same context that
+Independence covers **PLANNING as well as code** — a plan cannot be self-graded by the lineage that
 produced it, any more than code can be self-reviewed by the agent that wrote it. The plan-CHECK (§6b) is
-the planning half of this rule: a fresh-context checker that did **not** see the PROPOSE/planning
+the planning half of this rule: an initially separate checker that did **not** see the PROPOSE/planning
 rationale judges the plan against the goal, roadmap, and acceptance criteria — not the planner's
-self-justification.
+self-justification. That checker may resume to evaluate the author's patch; it never becomes the author.
 
-For code, the reviewer is always a separate agent in a fresh context, judging against criteria written
-*before* the code (the plan's acceptance criteria / the failing tests). This is the one rule that makes
-autonomous quality possible — protect it. Do not collapse implementer+reviewer to save a hop, and do not
-let the planner approve its own plan.
+For code, the reviewer is always a separate lineage, initially clean, judging against criteria written
+*before* the code (the plan's acceptance criteria / the failing tests). Resuming it for finding closure
+preserves that boundary and saves remapping; a materially broadened patch gets a fresh regression checker
+under §2a. Do not collapse implementer+reviewer to save a hop, and do not let the planner approve its own
+plan.
 
 The **`security:security`** agent shares this independence — a separate, read-only reviewer that *reports*
 vulnerabilities (with `file:line` + fix) and never edits source; the implementer remediates. It runs

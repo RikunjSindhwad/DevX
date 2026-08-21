@@ -60,4 +60,46 @@ approach actually breaks.
 - **Know when to stop.** Three failed attempts means the *approach* is wrong — stop, reconsider
   fundamentals, and escalate. More blind fixes make things worse.
 
-> Source: DevX curated knowledge · curated · 2026-06-20
+## Label every claim with its verification state
+
+When an investigation produces findings, force each one into exactly three buckets:
+
+| label | meaning |
+|---|---|
+| `CONFIRMED` | reproduced; the exact command and observed output are recorded |
+| `NEEDS-DYNAMIC-TESTING` | plausible, not reproduced; what blocked it is stated |
+| `THEORETICAL` | the pattern matches but no reachable path was established |
+
+Applied mid-investigation across several parallel agents, this changed behaviour immediately:
+they began isolating claims with negative controls instead of asserting them, and several
+self-downgraded their own earlier findings. The label is cheap and it makes over-claiming
+visible rather than rhetorical. Introduce it in the **initial** brief, not as a correction.
+
+## A control that reads correct in source may be inert on a parallel path
+
+The highest-value bug in one investigation was a status filter that looked, statically, like a
+working access control — and *was* one, on one of two execution engines. The second engine never
+read the value the guard set, because a comment explained the filter had been "already considered"
+upstream. Reading the guard confirmed it worked. Only running the same request against both
+engines showed one returning private content and the other not.
+
+**Technique:** when a system has two or more interchangeable implementations of the same operation
+(engines, backends, code paths, cache tiers, fast/slow paths), never verify a control on one and
+generalise. Run the identical input through each and diff the outputs. The asymmetry *is* the bug,
+and it is invisible to source reading because each path looks locally correct.
+
+This is the inverse of the [[#Collision zone]] idea: instead of looking where two things meet, look
+where two things that should be equivalent quietly are not.
+
+## Test the cheap claim instead of reasoning about it
+
+If a claim can be settled by one command and a live environment exists, reasoning about it is a
+false economy. In one audit three separate well-argued conclusions were each overturned by a single
+test — two of which changed the top finding's severity, and one of which was a plausible-sounding
+escalation that did not exist at all. The reasoning was not sloppy; it was just unverified.
+
+Corollary: a negative result needs the same scrutiny as a positive one. An off-by-one in a test
+payload produces silence that is indistinguishable from "not vulnerable." When a test fails to
+reproduce, first prove the test itself reached the code under test.
+
+> Source: DevX curated knowledge · curated · 2026-06-20 · extended 2026-07-25

@@ -77,18 +77,38 @@ Verify (live): {…}
 
 ## Done when
 - {phase-level exit: all tasks PASS-reviewed, suite green, any phase-specific live-verify done}
-- (app-delivering phases) the app is debuggable: an adjustable-verbosity / debug mode exists, and key
-  state transitions + external-command attempts are structured-logged (not scattered prints). Mark N/A
-  with a one-line reason for non-app phases.
+
+## Diagnostics applicability
+<!-- Required for every phase. Canonical: references/contracts/diagnosability.md.
+     A runnable product cannot use a generic N/A. Use the project's native logger; do not add a parallel
+     telemetry stack or new DevX flag. -->
+- Shape(s): {library | CLI | browser/frontend | desktop/mobile | service/API | worker/pipeline | distributed | N/A — specific non-runnable reason}
+- Inherited diagnostics owner: {logger/telemetry module/config, or gap this phase must establish}
+- Product control + destination: {LOG_LEVEL/config/standard app flag/settings control; stdout/file/support bundle/etc.}
+- Events/errors/correlation: {stable event/error names; operation/request/job/trace propagation this phase changes}
+- Privacy/resilience evidence: {redaction + log-injection + logger-failure/exception-boundary tests that apply}
+- Verify (live): {action/command and the structured event/correlation/failure observation expected}
+- Advanced N/A: {tracing | health | support bundle | crash upload — one-line applicability reason for each omitted item}
 
 ## GUI / visual (GUI tasks only — delete for non-GUI phases)
 <!-- Include when this phase builds or touches a GUI component (desktop or web).
      If you DELETE this block for a non-GUI phase, add a one-line justification (e.g. "non-GUI phase —
      CLI/library only") so the deletion is a deliberate, visible choice. -->
 - Demo mode: activatable without external deps, realistic sample data covers all major UI states [ ] yes / [ ] N/A
-- Visual criteria (beyond "it doesn't crash"):
-  - [ ] empty-state renders cleanly (no blank panes / placeholder text)
+- Product Interface Direction: {`.devx/architecture.md#product-interface-direction` or exact inherited design authority}
+- Changed views/states: {exact surfaces and default/loading/empty/error/success/disabled states}
+- Reuse: {token module + shared components + representative accepted screen/gallery paths}
+- Desktop/mobile composition: {what reflows/stacks/collapses/scrolls at 1440px and 375px, plus named viewport}
+- Typography/action hierarchy: {heading/body/data roles; one clear primary action and secondary treatment}
+- Text/accessibility: {long/localized text, 200% zoom, keyboard/focus/touch target, contrast pairs, theme variants}
+- Assets: {source/provenance/license + dimensions/aspect ratio + alt behavior, or N/A}
+- Motion: {purpose + reduced-motion outcome, or N/A}
+- Expected gallery: {sanitized view-state screenshot names}
+- Visual criteria (observable—not "modern", "beautiful", or "polished"):
+  - [ ] {hierarchy/composition/token criterion tied to the Product Interface Direction}
+  - [ ] empty/loading/error/success states render coherently without blank panes or placeholder text
   - [ ] EVERY interactive control (each button / menu item / toggle / list row / dialog / selector) is
         wired and produces its expected observable result — exercised via a REAL click/event, NOT a
         direct handler call. A rendered-but-unconnected or permanently-disabled control is a blocking defect.
-  - [ ] screenshot analyzed: layout intact, no overlapping/cut-off widgets
+  - [ ] 1440px + 375px (or desktop equivalents) screenshots and computed styles analyzed: hierarchy,
+        rhythm, contrast, consistency, responsive recomposition, and no overlap/cutoff/overflow

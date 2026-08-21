@@ -3,6 +3,48 @@
 All notable changes to **DevExpert** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 1.1.0 — Continuity, diagnosability, and interface quality · 2026-08-21
+
+### Context-efficient verification
+- Initial maker/checker contexts remain independent, while bounded revisions resume the exact author or
+  implementer and the producing critic/reviewer/security/browser lineage through Claude Code
+  `SendMessage` when available.
+- Fresh agents are now a documented fallback for session loss, unavailable lineages, ambiguous ownership,
+  or materially broadened scope—not the default response to every patch.
+- Immutable handoffs and `.devx/` files remain canonical across sessions/machines; resumed agents must
+  reread current files and rerun the complete applicable gate.
+- Token monitoring now runs at `SubagentStop` and reports per-agent continuation rounds plus cache-read
+  ratios alongside per-model totals.
+
+### Diagnosable generated software
+- Added a runtime-shaped diagnosability contract covering libraries, CLIs, browser/desktop apps,
+  services, workers, and distributed systems without mandating OpenTelemetry or a new DevX flag.
+- Runnable products now require structured events, stable errors, correlation, an appropriate product
+  verbosity control, safe exception capture, and redaction/injection/resilience evidence.
+- Added a bounded logs-to-plan route using the existing scout/designer/implementer/reviewer roles to
+  fingerprint, correlate, source-map, plan, patch, and verify failures without copying raw logs into
+  committed project state.
+
+### Product interface quality
+- Added one approved/inherited Product Interface Direction instead of a fashionable style menu or new UI
+  agent.
+- UI phase plans now carry observable desktop/mobile, hierarchy, typography, state, accessibility, asset,
+  and reduced-motion criteria.
+- The browser agent now verifies computed/rendered design quality against the direction and prior gallery,
+  in addition to its functional interaction, console, network, DOM, and screenshot checks.
+
+### Plugin completeness and knowledge
+- Corrected the generated-output ignore rules so the required `agents/build/implementer.md` agent is
+  included in the published plugin rather than being mistaken for a root build artifact.
+- Tightened code-graph discovery guidance around small, symbol-first result sets and focused snippet reads
+  to reduce context waste.
+- Expanded the curated vault with evidence-state labels, parallel-path verification guidance, and
+  generalized WordPress plugin development, authorization/CSRF, and PHP file-inclusion/instantiation
+  review patterns.
+
+### Tooling and compatibility
+- Updated the validated host baseline to Claude Code 2.1.229 while retaining Python 3.11 / 3.13 support.
+
 ## 1.0.0 — Initial release · 2026-07-23
 
 The first public release of **DevExpert** — a file-native, graph-engineered SDLC

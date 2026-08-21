@@ -1,8 +1,7 @@
 """Single-source guard for the canonical contract files.
 
-The phase-verification policy (severity tiers, verify-band sequence, bounded fix-pass rule, correctness floor,
-commit gate, independence) and the plan-check policy (who checks a plan, what it challenges, verdict,
-dependency reconciliation, re-baseline) each live in ONE canonical file under `references/contracts/`.
+The phase-verification, plan-check, and diagnosability policies each live in ONE canonical file under
+`references/contracts/`.
 Every stage/agent/skill *points* there instead of restating them — that is what stops the policy drift
 we refactored away (severity tiers were once defined in 3 files; plan-CHECK routing in 5).
 
@@ -23,11 +22,13 @@ CANONICAL = [
     ("never audit code", "references/contracts/phase-verification.md"),                  # §V2 sequence
     ("self-graded by the context that produced it", "references/contracts/plan-check.md"),  # §P1
     ("loosen a test in place", "references/contracts/plan-check.md"),                    # §P5 re-baseline
+    ("one universal `--debug` flag", "references/contracts/diagnosability.md"),          # runtime-shaped floor
 ]
 
 CONTRACTS = [
     "references/contracts/phase-verification.md",
     "references/contracts/plan-check.md",
+    "references/contracts/diagnosability.md",
 ]
 
 

@@ -10,9 +10,9 @@
 
 [![Robensive · Lazy Development](https://img.shields.io/badge/Robensive-Lazy%20Development-8A2BE2.svg)](https://robensive.in)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](#-license)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](#-requirements)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-2.1.218-D97757.svg)](#-compatibility)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-2.1.229-D97757.svg)](#-compatibility)
 
 **[Install](#-installation) · [Lazy Development](#-lazy-development) · [The Ladder](#-the-engineering-ladder) · [Quick Start](#-quick-start) · [How It Works](#-how-it-works) · [Architecture](ARCHITECTURE.md)**
 
@@ -23,7 +23,7 @@
 ---
 
 > [!NOTE]
-> **Most AI coding agents are a _loop_** — one model grinding on one context until it stops, reviewing its own work in the same window that wrote it. **DevExpert is the _graph_:** many specialized agents, each in a clean context, wired by explicit gates and routes — with **independent review** and a **correctness floor** standing between every change and your branch.
+> **Most AI coding agents are a _loop_** — one model grinding on one context until it stops, reviewing its own work in the same window that wrote it. **DevExpert is the _graph_:** separate maker/checker lineages, explicit gates and routes, and selective same-task continuation for patch work — with **independent review** and a **correctness floor** standing between every change and your branch.
 
 <div align="center">
 
@@ -84,7 +84,7 @@ flowchart BT
 | Layer | What it engineers | How DevExpert does it |
 |-------|-------------------|-----------------------|
 | **① Prompt** | the words in a single model call | Strict, single-sourced agent templates (persona → forced reads → steps → rules) — written once in `references/`, never restated |
-| **② Context** | what each model actually sees | **Files are the brain.** Every sub-agent starts fresh; the orchestrator passes *paths, not contents*; `kb_search` pulls only what's relevant. No bloated window |
+| **② Context** | what each model actually sees | **Files are the brain.** Initial maker/checker lineages start isolated; bounded revisions resume the exact author/checker when available. Every round rereads current paths; `.devx/` remains durable across sessions |
 | **③ Harness** | the tools & environment to act in | Native `Bash/Edit/Write/Read/Grep/Glob` + a lean `devx` CLI + hooks + **live-verify** (actually runs the app) |
 | **④ Loop** | one agent's build-verify cycle | The per-phase loop and a **bounded** fix loop — capped, never infinite |
 | **⑤ Graph** | the topology of the whole system | An **Opus orchestrator** routing specialized agents and deterministic gates: fan-out/fan-in, conditional routes, `PROPOSE → MAKE → CHECK → FIX` |
@@ -97,10 +97,12 @@ flowchart BT
 ## ✨ Why DevExpert
 
 - 🧠 **One Opus brain, many cheap hands.** A single long-lived orchestrator reasons and dispatches; **Sonnet** makes, **Haiku** does plumbing. Model *aliases* mean it rides your host's current generation — no pinned versions.
-- 🔒 **Independent review is the quality engine.** A separate reviewer in a **clean context** scores each phase against **pre-committed, executable criteria** — the anti-flattery rail. Self-approval is structurally impossible.
+- 🔒 **Independent review is the quality engine.** A separate reviewer lineage initially scores each phase in a **clean context** against pre-committed executable criteria, then can recheck the maker's patch without becoming the maker. Self-approval is structurally impossible.
 - 🚧 **Never ships broken.** A **correctness floor** halts autonomy on any unmet criterion, failing live-verify, blocking review, or surviving Critical/High vuln — and the sole git committer *refuses* to commit a failed-gate phase.
 - 📄 **Crash-proof by design.** Continuity lives in `.devx/` Markdown, not chat history. Runs survive crashes, hop machines, and resume from a fresh clone — **losslessly.** Reset beats compaction.
 - ⚡ **Just-in-time planning + safe parallelism.** Each phase is planned right before it's built and **independently plan-CHECKed**. Independent work fans out; results fan in only when every pre-allocated handoff validates.
+- 🔎 **Diagnosable by construction.** Runtime-shaped structured events, stable errors, correlation, safe exception capture, and log-driven source diagnosis are planned and verified with the first runnable slice—not bolted on after failure.
+- 🎨 **Intentional interfaces, verified from the render.** New visual worlds get one Product Interface Direction; localized changes inherit it. The browser checker inspects real desktop/mobile renders and computed styles as well as behavior.
 - 📚 **It compounds.** Per-phase research and learnings are FTS5-indexed, so a lesson one phase learns **ranks** for the next — and ship-time curation feeds a shared, cross-project knowledge vault through a validation gate.
 
 ---
@@ -193,7 +195,7 @@ Every substantive step runs the **`PROPOSE → MAKE → CHECK → FIX`** model p
 
 - **PROPOSE / DESIGN** *(Opus)* — reasons and directs; writes only `.devx/` judgment artifacts, never product source.
 - **MAKE** *(Sonnet)* — writes the code, tests, and docs.
-- **CHECK** *(Opus / Sonnet, independent)* — a fresh context judges the output against pre-committed criteria; it never sees the PROPOSE rationale, so it can't grade its own plan.
+- **CHECK** *(Opus / Sonnet, independent)* — an initially separate lineage judges against pre-committed criteria; it may resume for patch closure, but never sees maker rationale or writes the artifact.
 - **FIX** *(Sonnet)* — one bounded pass per rejected return; if the floor still isn't met, you're gated.
 
 *Optional external second opinion:* when evidence materially conflicts or a diff is high-blast-radius, the orchestrator may request permission for a single inline, read-only **Codex** review (roadmap/code/security) — off by default, operator-gated, and purely advisory. A *different model* raising flags; every retained claim still returns through DevExpert's own verifiers.
@@ -215,7 +217,7 @@ Everything is Markdown a human can open. `.devx/` is **committed and team-visibl
     brief.md  goal.md  roadmap.md  roadmap-check.md   # north star + independently checked phase map
     state.md  security-ship.md  handoffs/             # optional codex-*-review.md when operator approves
     research/                          # optional pre-roadmap spikes
-    phases/<NN>-<slug>/                # per-phase: plan.md plan-check.md research/ review.md gui.md security.md summary.md
+    phases/<NN>-<slug>/                # per-phase: plan.md plan-check.md research/ (incl. bounded log diagnosis) review.md gui.md security.md summary.md
   ui-gallery/<phase>/      # committed per-view UI screenshots (the visual acceptance record)
   index/                   # derived FTS5 indexes (git-ignored, rebuildable)
   cache/                   # fetch cache (git-ignored)
@@ -294,7 +296,7 @@ Issues and PRs are welcome. DevExpert is **expandable by design** — add an age
 
 ## 🔒 Compatibility
 
-Tested with **Claude Code 2.1.218** and **Python 3.11 / 3.13**. Tool permissions remain subject to your Claude Code settings: skill `allowed-tools` entries are invocation-time preapprovals, while an agent's `tools` field is a base-tool allowlist. Revalidate the plugin when changing Claude Code versions — hook, skill, and sub-agent schemas can evolve.
+Tested with **Claude Code 2.1.229** and **Python 3.11 / 3.13**. Tool permissions remain subject to your Claude Code settings: skill `allowed-tools` entries are invocation-time preapprovals, while an agent's `tools` field is a base-tool allowlist. Revalidate the plugin when changing Claude Code versions — hook, skill, and sub-agent schemas can evolve.
 
 ---
 

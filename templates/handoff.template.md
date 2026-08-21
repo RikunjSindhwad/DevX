@@ -20,7 +20,9 @@ If you need more detail, write it to the owning artifact (`review.md`, `security
 # Handoff: {agent} — {task}
 - Workstream: {slug}
 - Target repo: {absolute target repo or git root}
-- Code graph check: {project/status, or N/A — reason}
+- Code-graph use: {required | fallback | N/A — reason}
+- Code graph check: {exact MCP tool + query + useful result, or fallback/N/A reason; never copy an unrun claim}
+- Continuity: {initial | resumed — prior handoff path | fresh-fallback — reason}
 - When: {ISO-8601 UTC}
 - Status: {complete | partial | blocked}
 
@@ -32,7 +34,7 @@ If you need more detail, write it to the owning artifact (`review.md`, `security
 - `src/auth/token.py` — added `verify_token()` (rejects `alg:none`)
 - `tests/test_token.py` — 4 cases (valid, expired, bad-sig, alg-none)
 - ran: `pytest -q tests/test_token.py`
-- Reuse check: {codebase-memory/rg result, or N/A — reason}
+- Reuse check: {exact codebase-memory query/result + live rg confirmation, or fallback/N/A — reason}
 - Docs touched: {e.g. README.md §Usage — added --dry-run flag} | none — {reason: internal refactor, no public surface change}
 
 ## Decisions

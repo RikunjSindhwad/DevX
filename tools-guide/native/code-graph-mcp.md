@@ -73,10 +73,15 @@ or `index_repository`; snippet lookup requires `qualified_name`, not just `funct
 
 1. Ensure the repo is indexed. During bootstrap/init, run `index_repository` if it is missing or stale;
    otherwise report the stale index and use live search until the orchestrator refreshes it.
-2. Search by symbol/feature name with `search_graph`.
+2. Search by exact symbol/name pattern first with `search_graph` and an explicit `limit` of at most 10.
 3. Use `get_code_snippet` for the best candidates before writing new code.
 4. Use `trace_path` or `query_graph` when changing a shared path.
 5. Confirm changed/untracked files with live `rg`/`ast-grep` before final claims.
+
+**Keep queries lean.** Prefer symbol/name-pattern searches over broad semantic phrases; use broad search
+only when the owner name is unknown. Do not use `search_code mode="full"`; search for candidates, then read
+only the winning symbol with `get_code_snippet` or the live `Read` tool. Narrow with a path filter where
+supported. If a result is noisy, refine the query instead of increasing the limit.
 
 Record this in handoffs as `Code discovery: codebase-memory-mcp search_graph/search_code + rg` or the
 exact fallback used. A handoff that adds new code without naming discovery is incomplete.

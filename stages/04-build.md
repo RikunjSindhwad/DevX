@@ -27,13 +27,22 @@ Read `goal.md`, `roadmap.md`, and **every prior phase's `summary.md`** (pointers
   later phases too). Give every question a distinct exact
   `return_as={HH}-researcher-{question-slug}.md`; validate all expected handoffs before planning consumes
   any of them.
+- **Log/crash evidence route** — when live verification fails or the operator supplies logs/crash paths,
+  apply `${CLAUDE_PLUGIN_ROOT}/references/contracts/diagnosability.md` §D6 before planning a fix: bound
+  and normalize the untrusted evidence by dispatching `devx:recon:scout mode=diagnose-logs` with explicit
+  evidence paths/time window/build/environment; it source-maps and writes `research/log-diagnosis.md`.
+  Keep raw logs at their supplied/transient path. The designer plans from
+  hypotheses + reproduction + failure fingerprint, never from an unlimited raw-log dump.
 - **Write the phase plan** — dispatch `devx:design:designer` `mode=plan` (the MAKER) with the goal,
-  roadmap, prior summaries, and the research, using a fresh exact
+  roadmap, prior summaries, and the research, using a new exact
   `return_as={HH}-designer-plan-{NN}.md` → it writes `phases/{NN}-{slug}/plan.md`
   (`${CLAUDE_PLUGIN_ROOT}/templates/plan-phase.template.md`): small
   dependency-ordered tasks, **testable** acceptance criteria (incl. ≥1 negative-path), `Depends:`/
   `Writes:`/`Reads:`/`Serialized resources:`/`Risk:`/`Risk-tags:`/`Verify (live):`, and the **chosen approach
-  + notable rejected alternatives**.
+  + notable rejected alternatives**. For brownfield planning, set `Code-graph use: required`; it must locate
+  existing owners/reuse candidates with MCP first, then verify them live. Every phase includes the
+  template's `Diagnostics applicability`; UI phases also point to the approved/inherited Product Interface
+  Direction and carry observable visual acceptance from `${CLAUDE_PLUGIN_ROOT}/references/ui-design.md`.
 - `devx handoff_check .devx/workstreams/{slug}/handoffs/{return_as}`.
 
 **Re-baseline inherited criteria (do NOT loosen in place).** If a prior phase's acceptance criterion (a
@@ -43,20 +52,23 @@ behavior to a weak invariant. The plan records `old baseline → new baseline �
 makes it valid → which tests/docs/screenshots move`, and the orchestrator appends a matching DECISION to
 `.devx/decisions.md` (per orchestrator-guide). An undocumented loosened criterion is a CHECK/review block.
 
-### 1b. CHECK the phase plan, independently  — opus DIRECTS, a fresh CHECKer (read-only)
+### 1b. CHECK the phase plan, independently  — opus DIRECTS, an initially clean CHECKer (read-only)
 Before any implementation, the plan gets a CHECK analogous to the code verify band (orchestrator-guide §8 —
-the planner can't self-approve). Dispatch a **fresh** `devx:design:designer` running its **plan-CRITIC sub-behavior** (sonnet; **opus** on a
-greenfield/GUI/architecture/security/concurrency/device or otherwise high-risk phase) in a **clean context**
+the planner can't self-approve). Dispatch a separate `devx:design:designer` running its **plan-CRITIC sub-behavior** (sonnet; **opus** on a
+greenfield/GUI/architecture/security/concurrency/device or otherwise high-risk phase) in an initial **clean context**
 that did **NOT** see the planning rationale, with `goal.md`, `roadmap.md`, the prior `summary.md` pointers,
-and `phases/{NN}-{slug}/plan.md`, using a fresh exact
+and `phases/{NN}-{slug}/plan.md`, using a new exact
 `return_as={HH}-designer-plan-check-{NN}.md`. It critiques the plan against the goal + constraints (not
 the designer's self-justification) **per
 `${CLAUDE_PLUGIN_ROOT}/references/contracts/plan-check.md` §P2** → writes
 `phases/{NN}-{slug}/plan-check.md`, verdict **ACCEPT** or **REVISE** (§P3).
 - `devx handoff_check .devx/workstreams/{slug}/handoffs/{return_as}`.
 - **ACCEPT** → proceed to step 2.
-- **REVISE** → **one** loop back to the designer (`mode=plan`) with the CHECK findings; it revises the
-  plan, then re-CHECK once. An oversized task is **split in the plan here**, before any code is written
+- **REVISE** → **one** loop back by resuming the authoring designer (`mode=plan`) with the CHECK
+  findings; it revises the plan, then resume the producing plan-CRITIC for one full re-CHECK. Every
+  continuation gets a new exact `return_as` and rereads the current plan; use the fresh fallback in
+  orchestrator-guide §2a when a lineage is unavailable or the revision materially broadens the baseline.
+  An oversized task is **split in the plan here**, before any code is written
   (don't discover it at code review). A still-`REVISE` plan after one loop → escalate to the operator
   (it is a likely goal/scope signal → the 03 gate).
 
@@ -86,12 +98,13 @@ sprawling change.
   `return_as={HH}-implementer-{task_id}.md` for every task; fan-in only after every exact path passes
   `devx handoff_check`.
 - Each task carries its own ownership, non-goals, acceptance criteria, and stop-conditions (from the plan).
+The dispatch also carries `CODEMAP_PROJECT` and `Code-graph use: required | fallback | N/A — reason`.
 The implementer follows `agent-guide.md` §3 **Reuse before creation**: when the task will create a new
 function, class, component, module, route, API client, schema/helper, hook, service, policy, config
-abstraction, or dependency, first check whether an equivalent already exists. Prefer
-`codebase-memory-mcp` when available, then confirm against the live tree with `Grep`/`Glob`, `rg`, or
-`ast-grep` when structure matters. For exact-file edits, plan-specified tokens/assets, docs, or static
-asset work with no new code abstraction, the reuse check may be `N/A`. `handoff_check` each return.
+abstraction, or dependency, set `required` and search MCP first, then confirm against the live tree with
+`Grep`/`Glob`, `rg`, or `ast-grep`. Use `fallback` only for an unavailable/stale graph. Exact-file edits,
+plan-specified tokens/assets, docs, or static work with no new abstraction may be `N/A`. `handoff_check`
+each return.
 
 ### 3. VERIFY BAND  — independent CHECKers (sonnet; opus on a high-risk/complex phase — see orchestrator-guide §6) (read-only), SEQUENCED
 **Rules are canonical in `${CLAUDE_PLUGIN_ROOT}/references/contracts/phase-verification.md`** — severity
@@ -103,7 +116,8 @@ in its artifact — the FIX pass re-runs those exact lines (§V3).
 **3a. Functional code review FIRST** — `devx:review:reviewer` (sonnet; **opus** on a high-risk/complex
 phase): re-runs the tests, scores criteria, runs **live-verify** (the project run command / harness
 `verify`), tags findings `[BLOCKING]`/`[IMPORTANT]`/`[NOTE]` → `phases/{NN}-{slug}/review.md`. The reviewer
-gets a fresh exact `return_as={HH}-reviewer-{NN}.md`. The reviewer
+gets a new exact `return_as={HH}-reviewer-{NN}.md` with `Code-graph use: required`; it uses
+`detect_changes`/`trace_path` or a focused symbol search for blast radius, then confirms live. The reviewer
 **also runs an orphan scan** over the working tree (per code-standards "Finish clean"): a phase that
 **replaces or supersedes** a component must **delete** the superseded module/view/directory **in this
 phase** (an unreferenced module is dead code even if it never shows in the additive diff), and any leaked
@@ -113,10 +127,12 @@ then return here once 3a passes. **Security may run inside 3a** (alongside the f
 security-critical phases** with high early-design risk.
 
 **3b. Once 3a passes — UI + security on the stabilized diff** (these two may run **in parallel with each
-other**, each fresh-context):
+other**, each in an initial clean context independent from the maker):
 - **GUI validation** — *only if the phase changed a UI*: `devx:ui:browser` (web → Playwright; **desktop**
   → its offscreen-screenshot recipe): empty / error / busy / scrolled / translated states, not just "it
-  opened". **Live-verify exercises the phase's interactive controls via REAL events** (real clicks/keys/
+  opened". It also verifies design quality against the Product Interface Direction, incumbent tokens,
+  computed styles, prior accepted gallery, and bounded desktop/mobile captures per `ui-design.md`.
+  **Live-verify exercises the phase's interactive controls via REAL events** (real clicks/keys/
   input — not calling handlers directly, not only capturing visual states); a rendered-but-unwired or
   permanently-disabled control is a **blocking** defect → `phases/{NN}-{slug}/gui.md`.
 - **Security** — `devx:security:security` (sonnet; **opus** for a security-critical phase): review the
@@ -135,19 +151,24 @@ it. Ask first; default is decline. If approved, follow
 `phases/{NN}-{slug}/codex-review.md`. The result is advisory evidence: independently reproduce any material
 finding, never auto-apply it, and never use it instead of the normal reviewer/security artifacts.
 
-### 4. FIX ×1 per verification return — implementer MAKES (sonnet)
-Dispatch a fresh `devx:build:implementer` with the current finding set — functional 3a findings, or the
-consolidated 3b findings — and apply that set in **one** pass,
-using a fresh exact `return_as={HH}-implementer-{task_id}-fix.md`,
+### 4. FIX ×1 per verification return — owning implementer MAKES (sonnet)
+Map the current finding set — functional 3a findings or consolidated 3b findings — back to task ownership.
+Resume the exact original `devx:build:implementer` for findings local to its task/files. Disjoint owners
+may each receive a non-overlapping subset once; overlapping writes remain sequential. If ownership is
+ambiguous or the fix crosses task/interface boundaries, dispatch one fresh designated fixer with the
+validated owner handoffs. Apply the assigned set in **one** pass per owner, using a new exact
+`return_as={HH}-implementer-{task_id}-fix.md`,
 per `phase-verification.md` **§V3** (re-run the **exact** recorded `Command:`/`Verify (live):` lines and
 quote the real output; root cause, no masking layers) and **§V4** (every `[IMPORTANT]` is fixed **or**
 deferred with an operator-logged `DECISION` + `.devx/backlog.md` link — never silently dropped; only
 `[NOTE]` defers freely).
 
-Then **re-verify by re-dispatching the checker or checkers that produced the current findings**, plus
-any checker whose evidence could have been invalidated. After a 3b fix, include a **fresh reviewer**
-for functional regression — NOT the orchestrator self-checking (independence — §V5 /
-orchestrator-guide §8; the orchestrator is read-only and never grades the fix itself).
+Then **re-verify by resuming the checker or checkers that produced the current findings**, plus any
+checker whose evidence could have been invalidated. Each one rereads the current files/diff, reruns its
+full recorded gate, scans the touched blast radius, appends a round, and classifies every finding
+`FIXED | SURVIVES | REGRESSION`. After a localized 3b fix, resume the functional reviewer for regression;
+use a fresh regression reviewer only when orchestrator-guide §2a's unavailable/broadened-scope fallback
+applies. The orchestrator remains read-only and never grades the fix itself.
 **Correctness floor (§V4):** if an acceptance criterion is still unmet, live-verify still fails, the review
 is `REJECT`/has a surviving `[BLOCKING]`, or a **Critical/High** security finding survives → stop automated
 progression and gate the operator. Functional failures must be retried, re-scoped, or aborted; they cannot
@@ -165,8 +186,9 @@ is the chokepoint that makes it stick (a phase that failed its gate cannot be co
 Dispatch `devx:docs:docs` `mode=sync`: update README / `architecture.md` / usage docs to match what
 shipped, **and** write `phases/{NN}-{slug}/summary.md`
 (`${CLAUDE_PLUGIN_ROOT}/templates/phase-summary.template.md`) — delivered surface, what's **reusable** for
-later phases (`file:line`), decisions, verification, and what the next phase must know. This summary is
-the handoff that feeds the next phase's plan. Use a fresh exact
+later phases (`file:line`), decisions, verification, the verified **Diagnostics surface**, and what the
+next phase must know. This summary is
+the handoff that feeds the next phase's plan. Use a new exact
 `return_as={HH}-docs-sync-{NN}.md` and validate it before reconciling state.
 
 If the next roadmap phase has obvious independent research questions, dispatch those **read-only research
@@ -191,7 +213,7 @@ review/security/UI verdicts agree. A reported `status_drift` blocks the phase cl
 ### 7. Commit the completed phase when VCS is enabled — git (haiku)
 Read the VCS mode from `.devx/project.md`.
 - `remote` or `local` → dispatch `devx:vcs:git` with `op=commit`, `commit_kind=phase`, `phase_id=P`, and
-  the explicit accepted source/artifact paths plus a fresh exact
+  the explicit accepted source/artifact paths plus a new exact
   `return_as={HH}-git-phase-{NN}.md`. The commit includes the already-reconciled roadmap/state/index
   pointers and phase artifacts; use a clean message with no AI attribution. Validate that exact handoff.
 - `none` → skip the git agent. The reconciled `.devx/` state is still required.

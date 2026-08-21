@@ -85,3 +85,21 @@ def test_plugin_command_hooks_use_exec_form():
                 if hook.get("type") == "command" and not isinstance(hook.get("args"), list):
                     bad.append(f"{event}/{group.get('matcher', '*')}: {hook.get('command')}")
     assert not bad, "command hooks must use explicit args arrays (exec form):\n" + "\n".join(bad)
+
+
+def test_token_monitor_runs_on_subagent_stop_for_resumed_rounds():
+    data = json.loads((ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+    hooks = data["hooks"]
+    assert "SubagentStop" in hooks
+    commands = [
+        hook
+        for group in hooks["SubagentStop"]
+        for hook in group["hooks"]
+        if hook.get("type") == "command"
+    ]
+    assert any("token_monitor.py" in " ".join(hook.get("args", [])) for hook in commands)
+    assert not any(
+        "token_monitor.py" in " ".join(hook.get("args", []))
+        for group in hooks.get("PostToolUse", [])
+        for hook in group["hooks"]
+    )

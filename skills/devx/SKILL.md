@@ -46,6 +46,7 @@ allowed-tools:
   - Bash(tail *)
   - Bash(mkdir *)
   - Agent
+  - SendMessage
   - AskUserQuestion
   - Skill          # to invoke the harness run/verify skills for live-verify (stage 04)
   - TaskCreate
@@ -61,9 +62,15 @@ intended paths; Claude Code permissions, hooks, and the host sandbox remain the
 enforcement layers. Cross-session continuity comes from `.devx/`, not skill
 frontmatter memory.
 
-You are the orchestrator. This is a multi-agent system: you **analyze, decide, and dispatch**.
+You are the orchestrator. This is a multi-agent system: you **analyze, decide, dispatch, and continue
+the right lineage**.
 Sub-agents own their domains — they embed their own tools, error handling, and retries, and return a
 summarized **handoff**. You read handoffs and steer. You are the **only** dispatcher.
+
+Use `Agent` for an agent's **initial** assignment. For a bounded revision or recheck in the same live
+Claude session, use `SendMessage` to resume the exact author/implementer or producing checker, following
+orchestrator-guide §2a. Initial maker/checker separation stays mandatory; continuation never replaces
+the file-based `.devx/` resume model, and a new unique `return_as` is required for every round.
 
 **Dispatch fast, with exact barriers.** If your next decision needs the handoff now, keep that agent in the
 foreground. If the work is independent prep/research/docs and you can keep steering while it runs, dispatch
@@ -104,8 +111,9 @@ all references now — load on demand.)
 Immediately after reading it, establish the target contract from orchestrator-guide §1a: `TARGET_REPO`,
 `CURRENT_CWD`, `GIT_ROOT`, and the intended workstream. If the operator appears to be talking about a
 different repo than `pwd`/`git rev-parse --show-toplevel`, stop at the attach gate and ask before scouting,
-auditing, or planning. Include that target contract, plus whether code-graph use is expected, in every
-sub-agent brief.
+auditing, or planning. Before the first repo-discovery dispatch, verify the matching code-graph project once
+with `list_projects`/`index_status`. Include that target contract, `CODEMAP_PROJECT`, and an explicit
+`Code-graph use: required | fallback | N/A — {reason}` in every sub-agent brief.
 
 ## Pipeline (6 stages, progressive loading)
 
@@ -173,9 +181,10 @@ bounded fix-pass rule + the correctness floor replace them. See §6a–§8 and �
 
 **Reuse-before-create discovery:** when a task will create a new function, component, module, route,
 API client, schema/helper, policy, service, hook, config abstraction, or dependency, brief the agent to
-check existing code first. Prefer `codebase-memory-mcp` for existing-symbol/duplicate/snippet/call-path
-discovery, then confirm with live `rg`/`ast-grep`. For exact-file edits, plan-specified tokens/assets,
-docs, or static-asset tasks with no new code abstraction, the reuse check may be `N/A`.
+check existing code first and mark code-graph use `required`. Its first source-discovery action must be a
+focused `codebase-memory-mcp` search, followed by live `rg`/`ast-grep` confirmation. Use `fallback` only
+when the verified graph is unavailable/stale. Exact-file edits, plan-specified tokens/assets, docs/static
+work, browser checks, and git-only work may be `N/A` with a concrete reason.
 
 ## On startup
 

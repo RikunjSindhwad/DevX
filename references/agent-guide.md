@@ -46,11 +46,13 @@ contract from your dispatch brief and the live shell:
 - `GIT_ROOT`: `git rev-parse --show-toplevel` when available.
 - `WORKSTREAM`: the `.devx/workstreams/{slug}` you are serving.
 - `CODEMAP_PROJECT`: the `codebase-memory-mcp` project you will use, or `N/A`.
+- `Code-graph use`: `required`, `fallback`, or `N/A — {reason}` from the dispatch brief.
 
 If the brief's target repo does not match `CURRENT_CWD`/`GIT_ROOT`, stop before doing repo work. Record the
 mismatch in Issues and request orchestrator help; do not audit whatever repo happens to be open.
 
-When you use `codebase-memory-mcp`, prove it is the right graph before trusting it:
+When the orchestrator supplied a verified `CODEMAP_PROJECT`, use that project. Repeat the health check only
+when the project is missing, mismatched, empty, or appears stale:
 
 1. List projects / check index status.
 2. Select only a project whose root/name matches `TARGET_REPO` or `GIT_ROOT`.
@@ -144,11 +146,15 @@ routing summary, not the evidence archive.
 
 Write to `.devx/workstreams/{slug}/handoffs/{NN}-{agent}-{task}.md` (`{NN}` = zero-padded sequence;
 `{task}` = short slug). If the orchestrator names the handoff (`return_as:`), use exactly that name; otherwise follow the
-`{NN}-{agent}-{task}.md` convention above. Never overwrite an existing handoff — bump the suffix.
+`{NN}-{agent}-{task}.md` convention above. Never overwrite an existing handoff — bump the suffix. Record
+the dispatch lineage in the header as `Continuity: initial`, `resumed — {prior handoff}`, or
+`fresh-fallback — {reason}`. A resumed assignment is a new round: reread every named current file/diff;
+your earlier file reads are stale snapshots.
 
 The orchestrator runs `devx handoff_check` on your handoff the moment you return — it verifies the file
-exists, is non-empty, and has all six sections + a `Status:` line. A missing section or file gets you
-**re-dispatched**. Writing a valid handoff is part of finishing the task, not optional paperwork.
+exists, is non-empty, and has all six sections + a `Status:` line. A missing section or file gets the
+same lineage resumed when available, otherwise a fresh fallback. Writing a valid handoff is part of
+finishing the task, not optional paperwork.
 
 **Reuse before creation.** Before creating a new function, class, component, module, route, API client,
 schema/table helper, hook, service, policy, config abstraction, or dependency, first check whether an
@@ -156,11 +162,13 @@ equivalent already exists and can be reused or extended. This is not ceremonial:
 an explicitly named existing file, copying exact plan-specified tokens/assets, or doing docs/static
 asset work with no new code abstraction, this check may be `N/A`.
 
-When the check is relevant, use `codebase-memory-mcp` first when available (`search_graph`,
-`search_code`, `get_code_snippet`, `trace_path`) because it is the fastest way to find existing symbols
-and reuse candidates. Confirm against the live working tree with `Grep`/`Glob` or `ripgrep`; use
-`ast-grep` when structure matters. Use `devx kb_search` for project memory/vault context, not as a
-substitute for source-code discovery. Your handoff must include a short `Reuse check:` line in
+When `Code-graph use: required`, your **first source-discovery action** is a focused
+`codebase-memory-mcp` query (`search_graph`, `search_code`, `get_code_snippet`, or `trace_path`); a
+`list_projects`/`index_status` call alone does not perform discovery. Use exact symbols/path filters and a
+small result limit, then confirm against the live working tree with `Grep`/`Glob`, `ripgrep`, or
+`ast-grep`. With `fallback`, use those live tools and record why the graph was unusable. Use
+`devx kb_search` for project memory/vault context, not as a substitute for source-code discovery. Never report
+an MCP query you did not actually run. Your handoff must include a short `Reuse check:` line in
 **Changes** or **Decisions**, for example:
 
 - `Reuse check: codebase-memory search_code("apiFetch"), rg "apiFetch" -> reused auth/api-client.ts`

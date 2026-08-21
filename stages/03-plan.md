@@ -11,12 +11,12 @@ Produce `goal.md` (the north star) + `roadmap.md` (one line per phase). Detailed
 
 ## Steps
 1. Read the VCS mode from `.devx/project.md`. When it is `remote` or `local`, ensure a workstream branch
-   exists by dispatching `devx:vcs:git` `op=branch` with a fresh exact
+   exists by dispatching `devx:vcs:git` `op=branch` with a new exact
    `return_as={NN}-git-branch.md` (creates or resumes `devx/{slug}`). Validate that exact handoff before
    continuing. When it is `none`, skip all branch/commit dispatches; the `.devx/` workstream still records
    the lifecycle.
 2. Dispatch `devx:design:designer` `mode=plan` with `brief.md`, `project.md`, and `decisions.md`/
-   `architecture.md` (if present), using a fresh exact
+   `architecture.md` (if present), using a new exact
    `return_as={NN}-designer-roadmap.md`. It authors **two artifacts only**:
    - `goal.md` — outcome + definition-of-success + constraints/non-goals
      (`${CLAUDE_PLUGIN_ROOT}/templates/goal.template.md`).
@@ -30,7 +30,9 @@ Produce `goal.md` (the north star) + `roadmap.md` (one line per phase). Detailed
      For product-facing GUI apps, the roadmap must include an early **minimum visually satisfactory
      shell / first usable slice** that the operator can validate before many feature phases accumulate.
      Security/data foundations may precede it only when truly necessary; the first visible phase after
-     that foundation owns the visual baseline, not a late polish phase.
+     that foundation owns the visual baseline, not a late polish phase. The first runnable product slice
+     also establishes the applicable diagnosability floor; do not defer structured correlated evidence to
+     a final hardening phase.
    …and initializes `state.md` (NEXT ACTION = "plan phase P01"). The `P01` label maps to the on-disk
    directory `phases/01-{slug}/` (the human-facing roadmap label `P01` → the zero-padded phase number
    `01` in the path — never `phases/P01-…/`).
@@ -40,9 +42,9 @@ Produce `goal.md` (the north star) + `roadmap.md` (one line per phase). Detailed
    ```
 4. **Plan-CHECK (independent, before the gate).** The goal/roadmap must be independently challenged
    before the operator approves — the planner can't self-approve (orchestrator-guide §8; this is the
-   roadmap-level analogue of the per-phase plan-CHECK in §6b). Dispatch a **fresh-context** checker that
-   did **not** see the planning rationale — a **fresh `devx:design:designer`** in a clean context running its
-   **plan-CRITIC sub-behavior** (the reviewer stays a pure code-checker), with a fresh exact
+   roadmap-level analogue of the per-phase plan-CHECK in §6b). Dispatch an **initial clean-context**
+   checker that did **not** see the planning rationale — a separate `devx:design:designer` running its
+   **plan-CRITIC sub-behavior** (the reviewer stays a pure code-checker), with a new exact
    `return_as={NN}-designer-roadmap-check.md`, given `critic_target=roadmap`,
    `goal.md`, `roadmap.md`, `brief.md`, and `project.md` only. It writes
    `.devx/workstreams/{slug}/roadmap-check.md` and challenges the roadmap against the goal + constraints (not the
@@ -56,7 +58,10 @@ Produce `goal.md` (the north star) + `roadmap.md` (one line per phase). Detailed
 Present `goal.md` (outcome + success definition + constraints) and the `roadmap.md` phase map via
 `AskUserQuestion`: approve / adjust / re-scope. Surface the plan-CHECK's surviving concerns alongside,
 so the operator decides with the critique visible. This is where the operator owns the **end result and
-the scope**. Log `GATE` + `DECISION`. On change, the designer updates `goal.md`/`roadmap.md`.
+the scope**. Log `GATE` + `DECISION`. On change, resume the authoring designer under orchestrator-guide
+§2a to update `goal.md`/`roadmap.md`, then resume the producing plan-CRITIC for the full recheck. Every
+round gets a new exact handoff; use the documented fresh fallback when either lineage is unavailable or
+the change materially re-baselines scope/architecture/criteria.
 
 ### Optional — external advisory critique
 Offer (`AskUserQuestion`) a Codex CLI roadmap second opinion only when the internal plan evidence materially
@@ -74,7 +79,7 @@ them steer architecture or scope without the normal operator gate.
 - `goal.md` states a checkable outcome + success definition + constraints/non-goals.
 - `roadmap.md` lists dependency-ordered phases, one coarse line each (no task detail), each noting
   what it **needs** / **provides**; no dependency inversion survives.
-- The plan-CHECK ran in a fresh context (not self-graded), `roadmap-check.md` records its verdict/findings,
+- The initial plan-CHECK ran in a separate clean lineage (not self-graded), `roadmap-check.md` records its verdict/findings,
   and its blocking findings were resolved.
 - `state.md` NEXT ACTION points at planning the first phase.
 - In `remote`/`local` VCS mode the workstream branch exists; in `none` mode no git agent was dispatched.

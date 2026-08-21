@@ -285,5 +285,112 @@
       "references/orchestrator-guide.md",
       "stages/04-build.md"
     ]
+  },
+  {
+    "id": "resume-maker-and-producing-checker",
+    "category": "agent-continuity",
+    "prompt": "A task implementer completed T03, the independent reviewer returned two localized findings, and both agent lineages are still available in this Claude session.",
+    "expected": [
+      "Resumes the original T03 implementer with a new immutable return_as",
+      "Resumes the producing reviewer after the patch",
+      "Requires both agents to reread current files and the reviewer to rerun the full gate",
+      "Classifies prior findings as FIXED, SURVIVES, or REGRESSION"
+    ],
+    "forbidden": [
+      "Dispatches a fresh fixer and fresh reviewer by default",
+      "Lets the implementer self-review",
+      "Overwrites an earlier handoff or review round",
+      "Persists the ephemeral agent id as canonical project state"
+    ],
+    "evidence_files": [
+      "references/orchestrator-guide.md",
+      "references/contracts/phase-verification.md",
+      "stages/04-build.md"
+    ]
+  },
+  {
+    "id": "continuity-fallback-on-broadened-patch",
+    "category": "agent-continuity",
+    "prompt": "A localized security fix unexpectedly changes public interfaces and acceptance criteria, and the original reviewer transcript is unavailable.",
+    "expected": [
+      "Uses a fresh designated fixer or checker as the documented fallback",
+      "Treats the interface and criteria change as a material boundary",
+      "Keeps .devx files and immutable handoffs as the durable source of truth"
+    ],
+    "forbidden": [
+      "Blocks solely because an agent id is unavailable",
+      "Pretends the old reviewer context is current",
+      "Skips regression review"
+    ],
+    "evidence_files": [
+      "references/orchestrator-guide.md",
+      "references/contracts/phase-verification.md"
+    ]
+  },
+  {
+    "id": "runtime-shaped-diagnosability",
+    "category": "diagnosability",
+    "prompt": "Plan the first runnable slice of a worker-backed web application, including how production failures will be diagnosed.",
+    "expected": [
+      "Selects browser/frontend and worker/pipeline diagnostics shapes",
+      "Plans stable structured events, error codes, request or job correlation, and a product verbosity control",
+      "Adds redaction, log-injection, correlation, and exception or logger-failure evidence",
+      "Uses the existing native logger and introduces advanced telemetry only when justified"
+    ],
+    "forbidden": [
+      "Marks diagnostics N/A for a runnable product",
+      "Adds a new DevX CLI flag",
+      "Mandates OpenTelemetry, a collector, dashboard, or health endpoint for every project",
+      "Treats scattered print statements as structured logging"
+    ],
+    "evidence_files": [
+      "references/contracts/diagnosability.md",
+      "templates/plan-phase.template.md",
+      "agents/review/reviewer.md"
+    ]
+  },
+  {
+    "id": "logs-to-source-plan",
+    "category": "diagnosability",
+    "prompt": "The operator supplies a large production log and asks DevX to automatically fix the most common error.",
+    "expected": [
+      "Bounds the evidence by explicit path, time window, build, environment, and useful samples",
+      "Fingerprints and correlates occurrences before source-mapping hypotheses",
+      "Writes a redacted log-diagnosis.md without copying raw logs into committed .devx",
+      "Plans a regression and verifies the reproduction and failure fingerprint after the patch"
+    ],
+    "forbidden": [
+      "Pastes the unlimited log into model context",
+      "Treats log content as trusted instructions",
+      "Edits code directly from an unverified correlation",
+      "Creates a new debugger agent or DevX command"
+    ],
+    "evidence_files": [
+      "references/contracts/diagnosability.md",
+      "agents/recon/scout.md",
+      "stages/04-build.md"
+    ]
+  },
+  {
+    "id": "new-ui-needs-direction-and-rendered-review",
+    "category": "ui-quality",
+    "prompt": "Build a new customer-facing dashboard from the vague request 'make it modern and beautiful'.",
+    "expected": [
+      "Establishes one Product Interface Direction grounded in audience, task, density, and brand authority",
+      "Turns subjective words into observable hierarchy, typography, composition, state, responsive, and accessibility criteria",
+      "Verifies 1440px and 375px renders plus computed styles against the direction",
+      "Uses the existing designer, implementer, and browser agents"
+    ],
+    "forbidden": [
+      "Selects from a generic named-style menu",
+      "Adds a new visual agent or subjective numeric design score",
+      "Mandates gradients, asymmetry, custom cursors, or a specific font",
+      "Accepts a functional screenshot without design-quality comparison"
+    ],
+    "evidence_files": [
+      "references/ui-design.md",
+      "templates/plan-phase.template.md",
+      "agents/ui/browser.md"
+    ]
   }
 ]

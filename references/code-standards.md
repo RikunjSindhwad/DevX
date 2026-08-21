@@ -113,15 +113,17 @@ package/build smoke. A task or workstream is complete only when that gate is gre
 - Run the project's formatter and linter; commit clean (no debug prints, no 0-byte files).
 - Comments explain **why**, not what; keep them honest — a stale comment is a bug.
 
-## Debuggability (gated)
-A delivered app must be inspectable. This is a **gated acceptance criterion**: an app with no way to
-raise verbosity and observe internal state is "not done". Require, as applicable:
-- **Structured logging** via the logging facility (not scattered `print`s) — this is the *structured,
-  switchable* mode, distinct from and not satisfied by stray debug prints (which stay banned).
-- **Adjustable verbosity** — a `--debug`/`--verbose` flag or `LOG_LEVEL`-style control.
-- **Logged external-command attempts** and **worker-lifecycle visibility** (start/finish/cancel/error).
-- **Meaningful error states** surfaced to the user/operator, not swallowed.
-- **Noisy dependency logs suppressed by default**, raised only on request.
+## Diagnosability (gated, runtime-shaped)
+Canonical: `references/contracts/diagnosability.md`. A delivered runnable product must expose enough
+structured, correlated evidence to reconstruct a failed operation; a library must preserve typed errors
+and caller-owned logging hooks without configuring global logging. The plan selects the runtime shape and
+proves its applicable floor. Scattered `print`s do not satisfy it and remain banned.
+
+At minimum for the selected shape: native structured events with stable names/error codes, an appropriate
+product verbosity control, operation/request/job correlation, meaningful lifecycle/external-attempt events,
+one sanitized exception boundary, and tests for redaction/injection/correlation/failure behavior. Missing
+applicable baseline diagnosability is blocking. OpenTelemetry, health endpoints, dashboards, support
+bundles, and crash uploaders remain applicability-based—do not add them speculatively.
 
 ## Packaging & artifacts
 - Prefer **minimal** bundle collection — explicit includes/excludes, not "collect everything" (smaller

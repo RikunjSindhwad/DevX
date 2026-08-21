@@ -1,10 +1,11 @@
-"""Tests for hooks/token_monitor.py — the PostToolUse cost/usage tracker.
+"""Tests for hooks/token_monitor.py — the SubagentStop cost/usage tracker.
 
 Focus on pricing-tier resolution and a cost calc, so a new model family (Fable, Mythos, a future
 Sonnet/Opus/Haiku) is priced from its own rate instead of silently falling through to the Sonnet row.
 Stdlib-only module loaded directly (no side effects at import; main() is __main__-guarded).
 """
 import importlib.util
+import json
 from datetime import date
 from pathlib import Path
 
@@ -63,3 +64,45 @@ def test_display_model_labels_families_with_version():
     assert tm.display_model("claude-mythos-5") == "mythos-5"
     assert tm.display_model("claude-sonnet-5") == "sonnet-5"      # not bare "sonnet"
     assert tm.display_model("claude-opus-4-8") == "opus-4.8"
+
+
+def test_count_rounds_excludes_tool_results(tmp_path):
+    transcript = tmp_path / "agent-abc.jsonl"
+    rows = [
+        {"type": "user", "message": {"role": "user", "content": "Initial task"}},
+        {"type": "user", "message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": "t1", "content": "ok"}
+        ]}},
+        {"type": "user", "message": {"role": "user", "content": [
+            {"type": "text", "text": "Resume and recheck"}
+        ]}},
+    ]
+    transcript.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    assert tm.count_rounds(transcript) == 2
+
+
+def test_build_table_shows_subagent_continuity_and_cache_ratio():
+    agent = tm.empty_usage("sonnet-5")
+    agent.update({
+        "agent_id": "agent-12345678",
+        "agent_type": "devx:review:reviewer",
+        "rounds": 2,
+        "messages": 3,
+        "input_tokens": 100,
+        "output_tokens": 20,
+        "cache_read": 900,
+        "cost_usd": 0.01,
+        "models": {"sonnet-5": {
+            **tm.empty_usage("sonnet-5"),
+            "messages": 3,
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "cache_read": 900,
+            "cost_usd": 0.01,
+        }},
+    })
+    table = tm.build_table(tm.empty_usage(), [agent])
+    assert "continuity by subagent" in table
+    assert "review:reviewer" in table
+    assert "12345678" in table
+    assert "90.0%" in table

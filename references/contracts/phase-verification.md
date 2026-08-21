@@ -13,14 +13,16 @@ Every review/security finding is tagged with exactly one tier:
   secret, a test regression, a happy-path correctness bug, an unwired/dead interactive control, a
   god-file (a module mixing >1 of {UI render, navigation, worker lifecycle, I/O, domain policy,
   persistence, external device/API}), or an **undocumented loosened test / relaxed goal-level success
-  criterion** (see `plan-check.md` re-baseline rule).
+  criterion** (see `plan-check.md` re-baseline rule). For a runnable product, omitting the applicable
+  baseline in `diagnosability.md` (structured events, runtime control, correlation, failure capture, and
+  required security tests) is also blocking; a library satisfies its different, caller-owned floor.
 - **`[IMPORTANT]`** — non-blocking, but the orchestrator **MUST action every one before commit** via
   exactly one of: **fix** it · **downgrade** it with explicit evidence · **deliberately defer** it with
   a `.devx/backlog.md` link and a `DECISION`. A valid deferral names the source artifact/finding id,
   owner phase/workstream, priority, reason, and closure condition; otherwise it is still
   undispositioned. This is **not** a silent demotion to `[NOTE]` or an unprioritized backlog. Covers: a
   user-visible behavior named in the brief (even if not an explicit criterion), a security finding
-  below Critical/High, a band-aid-over-root-cause, and module-size / debuggability /
+  below Critical/High, a band-aid-over-root-cause, and module-size / optional diagnostic enhancement /
   string-externalization / shared-token / orphan-module / untracked-TODO findings.
 - **`[NOTE]`** — housekeeping/style/refactor with no user-visible impact; may be batched or deferred
   freely.
@@ -34,14 +36,18 @@ Per phase, after implement:
    leaves a surviving `[BLOCKING]`, fix and re-review **before** spending on the rest.
 2. **3b — once 3a PASSes**, on the **stabilized diff**: `devx:ui:browser` (only if a UI changed) +
    `devx:security:security`. These two may run **in parallel with each other**.
-3. **fix** the 3b findings, then **re-verify** by re-dispatching a **fresh** verify band (a fresh
-   reviewer; security/ui only if they had findings).
+3. **fix** the 3b findings, then **re-verify** under orchestrator-guide §2a: resume the producing
+   reviewer/security/UI checker lineages when the patch stays localized; use a fresh regression checker
+   only when continuation is unavailable or the patch materially broadens scope/interfaces/criteria.
 
 Security may run inside **3a** only for a **security-critical** phase with high early-design risk.
 Rationale: security/UI must never audit code that a pending review will rewrite.
 
 ## §V3 — One FIX pass per verification return
-Each rejected verification return gets at most **one** implementer pass before re-verification.
+Each rejected verification return gets at most **one** implementer pass per assigned owner before
+re-verification. Resume the original task implementer for findings local to its ownership. Cleanly
+partitioned disjoint owners may each receive their subset once; overlapping or ambiguous ownership uses
+one fresh designated fixer rather than concurrent writers.
 Functional review (3a) is one return. After it passes, parallel UI and security checks (3b) may be
 consolidated as a second return. The fixer applies the assigned finding set in one pass, then **re-runs the
 exact gate the verify band recorded** — the `Command:` / `Verify (live):` lines in
@@ -74,8 +80,12 @@ On refusal it does not commit — it surfaces the exact failing gate via `### Or
 returns; the **orchestrator owns the operator gate**.
 
 ## §V5 — Checker independence
-Every checker (the code reviewer, security) runs in a **fresh context** with no memory of how the artifact
-was made, and judges against the **pre-committed acceptance criteria** — never the maker's rationale or
-self-justification. A checker acts only on objective findings in its inputs; it **never fabricates or
-attributes operator feedback** that isn't there. (The independent check of a *plan* is the designer
-plan-CRITIC — see `plan-check.md`.)
+Every initial checker (code reviewer, security, UI) is a **separate clean lineage** with no memory of how
+the artifact was made, and judges against the **pre-committed acceptance criteria** — never the maker's
+rationale or self-justification. The producing checker may be resumed for finding closure because it
+remains separate from the maker. On continuation it rereads current files/diff, reruns the full applicable
+gate, scans the touched blast radius, appends a verification round, and classifies prior findings
+`FIXED | SURVIVES | REGRESSION`; it never rubber-stamps only the named patch. A materially broadened patch
+gets a fresh regression checker under orchestrator-guide §2a. A checker acts only on objective findings
+and **never fabricates or attributes operator feedback** that isn't there. (The independent check of a
+*plan* is the designer plan-CRITIC — see `plan-check.md`.)

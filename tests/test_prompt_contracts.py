@@ -119,6 +119,39 @@ def test_codex_second_opinion_is_inline_gated_and_advisory():
     assert "DevX does not wrap it in a command" in guide
 
 
+def test_continuity_resumes_each_independent_lineage_with_fresh_fallback():
+    skill = _read("skills/devx/SKILL.md")
+    guide = _read("references/orchestrator-guide.md")
+    build = _read("stages/04-build.md")
+    verification = _read("references/contracts/phase-verification.md")
+
+    assert "SendMessage" in skill
+    assert "same-session optimization" in guide
+    assert "Never persist an ephemeral agent id" in guide
+    assert "resume the exact original `devx:build:implementer`" in build.lower()
+    assert "resume the producing" in build
+    assert "fresh regression checker" in verification
+    assert "FIXED | SURVIVES | REGRESSION" in verification
+
+
+def test_diagnosability_and_ui_quality_are_runtime_scoped_and_enforced():
+    diagnostics = _read("references/contracts/diagnosability.md")
+    ui = _read("references/ui-design.md")
+    plan = _read("templates/plan-phase.template.md")
+    reviewer = _read("agents/review/reviewer.md")
+    browser = _read("agents/ui/browser.md")
+    scout = _read("agents/recon/scout.md")
+
+    for shape in ("library/package", "CLI", "browser/frontend", "service/API", "worker/pipeline"):
+        assert shape in diagnostics
+    assert "This is not a new DevX flag" in diagnostics
+    assert "log-diagnosis.md" in diagnostics and "diagnose-logs" in scout
+    assert "Missing applicable baseline" in reviewer and "[BLOCKING]" in reviewer
+    assert "Product Interface Direction" in ui and "subjective numeric design scores" in ui
+    assert "1440px" in browser and "375px" in browser and "computed" in browser
+    assert "Diagnostics applicability" in plan and "Product Interface Direction" in plan
+
+
 def test_docs_research_memory_backlog_and_promotion_contracts():
     docs = _read("agents/docs/docs.md")
     explain = _read("skills/devx-explain/SKILL.md")
@@ -152,6 +185,9 @@ def test_prompt_eval_corpus_has_required_coverage_and_valid_paths():
         "fan-in-barrier",
         "side-effect-reentry",
         "external-review",
+        "agent-continuity",
+        "diagnosability",
+        "ui-quality",
     }
 
     assert len(cases) == len({case["id"] for case in cases})

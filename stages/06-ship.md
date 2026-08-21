@@ -48,7 +48,7 @@ a pushed branch + PR — plus optionally folding generalizable DevX/process lear
    per-phase research and any generalizable DevX/process learnings — back into the vault; the operator can
    decline. When confirmed, dispatch `devx:docs:docs` in **curate** mode → it generalizes the chosen
    `.devx/learnings.md` process entries + durable per-phase research (strip project specifics), with a
-   fresh exact `return_as={NN}-docs-curate.md`, and stages
+   new exact `return_as={NN}-docs-curate.md`, and stages
    each candidate under
    `.devx/cache/promote/`. On return, run
    `devx handoff_check .devx/workstreams/{slug}/handoffs/{return_as}`.
@@ -69,13 +69,13 @@ a pushed branch + PR — plus optionally folding generalizable DevX/process lear
 7. **Reconcile and commit final durable state before any remote push.**
    - Run `devx state check --workstream {slug}` after curation/backlog reconciliation.
    - **Local:** set `state.md` complete and log the local ship result, then dispatch `devx:vcs:git` with
-     `op=commit`, `commit_kind=final-state`, explicit final artifact paths, and a fresh exact
+     `op=commit`, `commit_kind=final-state`, explicit final artifact paths, and a new exact
      `return_as={NN}-git-final-state.md`. The branch is the deliverable.
    - **Remote:** set `state.md` NEXT ACTION to `"open PR"` and log `"ship prepared"`; dispatch the same
      `commit_kind=final-state` operation before any push.
    - **None:** skip git, set `state.md` complete, and log the no-VCS completion.
 
-8. **Execute the remote action last, when selected.** Dispatch `devx:vcs:git op=pr` with a fresh exact
+8. **Execute the remote action last, when selected.** Dispatch `devx:vcs:git op=pr` with a new exact
    `return_as={NN}-git-pr.md` to push `devx/{slug}` and create or resume a PR to `base_branch` with the
    handoff-derived summary. If no remote is configured,
    surface that and return to the operator's mode choice; do not silently claim a local fallback.

@@ -1,7 +1,7 @@
 {
   "name": "devx",
   "description": "Multi-agent software delivery for repositories with a discoverable build and verification workflow. An Opus orchestrator dispatches specialized Sonnet and Haiku agents that design, plan, build, review, document, and ship through durable .devx/ files and an FTS5-indexed knowledge vault.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Rikunj Sindhwad",
     "email": "sindhwadrikunj@gmail.com",

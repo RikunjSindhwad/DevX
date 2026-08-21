@@ -7,8 +7,8 @@ verify band — `phase-verification.md`. The handoff/evidence contract is `agent
 
 ## §P1 — Who checks the plan (independence)
 A plan **cannot be self-graded by the context that produced it** — independence covers planning, not only
-code. The plan-CHECK is performed by a **fresh `devx:design:designer` running its plan-CRITIC sub-behavior**
-in a clean context that did **not** see the planning rationale (sonnet; **opus** for a greenfield / GUI /
+code. The initial plan-CHECK is performed by a **separate `devx:design:designer` running its plan-CRITIC
+sub-behavior** in a clean context that did **not** see the planning rationale (sonnet; **opus** for a greenfield / GUI /
 architecture / security-critical / concurrency / device-hardware / otherwise high-risk plan, per
 orchestrator-guide §6). **The reviewer stays a pure code-checker and is not used for plan-CHECK.** The
 plan-critic is handed the goal, roadmap, prior `phases/*/summary.md`, and the plan under review — never the
@@ -25,15 +25,23 @@ operator feedback).
   artifact that should have a dedicated owner step
 - missing **interface decomposition** on a non-trivial task (functions/signatures/data shapes)
 - missing UI / security / research `Risk-tags:`
-- missing **visual criteria** on a product-facing GUI
+- missing or generic **visual criteria** on a product-facing GUI: no inherited/approved Product Interface
+  Direction pointer, subjective-only wording ("modern", "beautiful", "polished"), missing desktop/mobile
+  composition or important states, or unproven asset provenance (`references/ui-design.md`)
+- missing or incorrectly marked-N/A runtime-shaped **diagnosability** requirements and evidence
+  (`references/contracts/diagnosability.md`)
 - **re-baselined criteria that were not logged** (§P5)
 - mismatch with the goal / definition of success
 
 ## §P3 — Verdict
 **ACCEPT** or **REVISE** with concrete, criterion-anchored findings, written to
 `.devx/workstreams/{slug}/roadmap-check.md` for a roadmap check, or
-`.devx/workstreams/{slug}/phases/{NN}-{slug}/plan-check.md` for a phase check. A REVISE returns to the
-**authoring designer** for **one** revise loop; the orchestrator logs the verdict.
+`.devx/workstreams/{slug}/phases/{NN}-{slug}/plan-check.md` for a phase check. A REVISE resumes the
+**authoring designer** for **one** revise loop when orchestrator-guide §2a permits, then resumes this
+producing critic for a full recheck. Each continuation gets a new immutable handoff; the critic appends a
+recheck round rather than erasing its earlier verdict. Use a fresh fallback when the lineage is unavailable
+or the revision materially changes scope, architecture, public interfaces, or acceptance criteria. The
+orchestrator logs the verdict.
 Implementation does not start on a plan that hasn't been ACCEPTed (or revised then accepted). The
 plan-critic **critiques, it does not rewrite** the plan.
 

@@ -26,6 +26,8 @@ reviewer checks structural changes against them.
   foundation must establish the visual baseline rather than leaving "make it look good" to the end.
 - Later phases extend the baseline; they do not introduce unrelated visual languages or defer global
   shell/design-system work as an unowned backlog item.
+- A new/replaced visual language records one `Product Interface Direction` in `.devx/architecture.md`;
+  localized changes inherit it. Canonical criteria live in `references/ui-design.md`.
 
 ## Boundaries & dependencies
 - Split by **responsibility/domain**, not by technical layer alone. One reason to change per module.

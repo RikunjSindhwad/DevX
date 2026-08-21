@@ -81,7 +81,9 @@ command with both candidate and target paths and landed in the vault.
 4. Keep it accurate and minimal; don't document aspirations.
 5. Write `phases/{NN}-{slug}/summary.md` from
    `${CLAUDE_PLUGIN_ROOT}/templates/phase-summary.template.md`: delivered surface, what's REUSABLE for
-   later phases (with `file:line`), decisions made, verification status, what the next phase must know.
+   later phases (with `file:line`), decisions made, verification status, the actual Diagnostics surface
+   (shape, verbosity control, destination, schema/error version, correlation, evidence), and what the next
+   phase must know. Use the phase plan/review/test evidence; do not claim diagnostics that were not run.
 
 ### WITHOUT a `phase` — whole-workstream coherence pass (stage 05)
 Runs once after all phases complete, to ensure the accumulated per-phase summaries produce a

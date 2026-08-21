@@ -10,7 +10,7 @@
       "name": "devx",
       "source": "./",
       "description": "DevExpert — hands-off, multi-agent, graph-engineered software delivery for Claude Code. An Opus orchestrator plans, builds (TDD), reviews, documents, and ships through specialized agents coordinating via durable .devx/ files.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Rikunj Sindhwad",
         "url": "https://robensive.in"

@@ -34,6 +34,8 @@ Playwright offers (status, console, network, DOM/ARIA, flows, auth, responsive).
 2. `${CLAUDE_PLUGIN_ROOT}/tools-guide/native/playwright.md` — **read this fully**: runtime preflight,
    the reuse protocol, the output convention, storage cleanup, security, the **reliability discipline** (§7:
    semantic locators + web-first `expect()` assertions, no sleeps), and capability recipes.
+3. `${CLAUDE_PLUGIN_ROOT}/references/ui-design.md` — the Product Interface Direction, bounded capture
+   matrix, computed-style inspection, design-quality dimensions, and severity rules.
 </important>
 
 ## Task
@@ -41,6 +43,8 @@ Given a target (URL / route / multi-step flow) and a question — "does X work?"
 does the console/network show?" — drive a **real headless browser** to answer it, and report findings backed
 by **concrete evidence** (HTTP status, console/page errors, failed requests, DOM/ARIA state, an analyzed
 screenshot). Save a reusable script; leave no transient artifacts behind.
+For a verification run, also decide whether the rendered interface is coherent with its approved or
+inherited Product Interface Direction. Functional correctness alone is not visual acceptance.
 
 **Done when:** the check actually ran in a browser (real captured state, never assumed); every actionable
 control was exercised via a **real event** and its transition recorded (dead/unreachable controls raised
@@ -58,6 +62,7 @@ written under `./.devx/ui-gallery/{phase}/` (committed) with a `gallery.md` inde
 | target | yes | URL / route / flow to drive |
 | goal | yes | What to verify or debug (+ acceptance criteria if it's a verification) |
 | env_vars | no | Names of required env vars (e.g. creds) — values from the environment, never the brief or the script |
+| prior_gui_report | resumed recheck only | Prior `gui.md`/handoff containing finding IDs to classify |
 
 ## Steps
 1. `devx log START browser "{task}"`.
@@ -75,8 +80,24 @@ written under `./.devx/ui-gallery/{phase}/` (committed) with a `gallery.md` inde
    documented trusted/isolated runtime where Chromium cannot otherwise launch. Credentials via
    `os.environ`, **never inline**. The script
    prints one JSON object to stdout and writes any artifacts to `.devx/cache/browser/`.
-5. **Run it** under the venv; parse the JSON. For a visual check, `Read` the screenshot and analyze it.
-6. **Interaction sweep (every actionable control).** Enumerate the changed view's actionable widgets —
+5. **Extract the incumbent system before judging.** Read the Product Interface Direction pointer in the
+   phase plan, theme/token modules, shared components, one or two representative accepted screens, and
+   the prior gallery where applicable. If this is a localized change, inheritance is the bar; do not
+   reward an unrelated redesign.
+6. **Run it** under the venv; parse the JSON. Capture a bounded visual batch: 1440px desktop, 375px
+   mobile, any operator-named viewport, and only the key changed states (desktop GUI: standard + cramped
+   equivalents). Extract computed/rendered values for headings, controls, panels, fields, spacing, colors,
+   radius, shadows, overflow, focus, and disabled states. `Read` every screenshot used as evidence.
+6a. **Design-quality comparison.** Compare the render against the approved/inherited direction, current
+   tokens, representative screens/prior accepted gallery, and an approved comp only when one exists.
+   Evaluate hierarchy/primary action, typography, rendered contrast, spacing/rhythm, component consistency,
+   task-appropriate density, imagery/icon coherence, responsive recomposition, state completeness,
+   accessibility, and anti-reference violations. Each finding names screenshot/state, selector or
+   `file:line`, impact, concrete repair, and what should be preserved. Use `[BLOCKING]` for acceptance,
+   accessibility, broken layout/state or unusable mobile/zoom/reduced-motion behavior; `[IMPORTANT]` for
+   clear direction/system drift or visibly unfinished inconsistency; `[NOTE]` for taste-only refinement.
+   Never assign a subjective numeric design score.
+7. **Interaction sweep (every actionable control).** Enumerate the changed view's actionable widgets —
    buttons · sidebar items · menus · toggles · list rows · dialogs · language selectors · save/export
    flows · start/stop controls. For EACH: confirm it's reachable/enabled in some state, **trigger it via a
    real user event** (web → `pg.get_by_role(...).click()`; Qt offscreen → `QTest.mouseClick(...)`, see
@@ -84,23 +105,30 @@ written under `./.devx/ui-gallery/{phase}/` (committed) with a `gallery.md` inde
    DOM change). **Never call the handler/slot directly** — a direct call hides dead wiring. Any control
    that clicks with **no signal / no state change**, or is **permanently disabled with no state that
    enables it**, is a **[BLOCKING]** finding in `gui.md`.
-7. **Durable gallery (the visual acceptance record).** Save **one** screenshot per meaningful view/state to
+8. **Durable gallery (the visual acceptance record).** Save **one** screenshot per meaningful view/state to
    the committed path `./.devx/ui-gallery/{phase}/{view}-{state}.png`, and write/update a short
    `./.devx/ui-gallery/{phase}/gallery.md` index. Commit only deliberately sanitized, non-sensitive images;
    authenticated/customer-data states stay transient. Cover: first screen · primary workflows · empty · error ·
    busy/loading · long lists · details view · settings/config · translated states (if applicable) ·
    hardware/device states (if applicable). The gallery is **committed and never deleted** — it's distinct
    from the transient debugging shots in `.devx/cache/browser/`.
-8. **Clean up.** Delete the exact transient artifacts created for the run—including storage state,
+9. **Clean up.** Delete the exact transient artifacts created for the run—including storage state,
    traces, videos, PDFs, downloads, and debug shots—once analyzed. Keep the reusable script and only
    the sanitized gallery images.
-9. **Report** findings with evidence. Append to `.devx/learnings.md` only when agent-guide §4 classifies
+10. **Report** findings with evidence. Append to `.devx/learnings.md` only when agent-guide §4 classifies
    the root cause as a DevX/process failure; product/UI failures stay in `gui.md` and the backlog.
    `devx log COMPLETE browser "{summary}"`.
 
+### Recheck continuation
+When resumed after a UI fix, reread the current direction, plan, prior `gui.md`, patch handoff, current
+files, and rerendered UI. Rerun the affected functional interaction sweep plus the bounded visual matrix.
+Append `## Recheck round {N}` to `gui.md` and classify every earlier finding
+`FIXED | SURVIVES | REGRESSION`; never erase the original captures/verdict.
+
 ## Output
-Findings (what works / what's broken, each backed by status / console / network / DOM / screenshot evidence
-— including the per-control interaction-sweep result) written to `phases/{NN}-{slug}/gui.md` + the saved
+Findings (what works / what's broken, each backed by status / console / network / DOM / screenshot and
+computed-style evidence—including the design-quality comparison and per-control interaction sweep) written
+to `phases/{NN}-{slug}/gui.md` + the saved
 reusable script path + the durable gallery under `./.devx/ui-gallery/{phase}/` (+ its `gallery.md` index) +
 a handoff at `.devx/workstreams/{slug}/handoffs/{NN}-browser.md`. Transient cache artifacts removed; the
 gallery is kept and committed.
@@ -113,6 +141,8 @@ gallery is kept and committed.
 - Each meaningful non-sensitive view/state has a sanitized screenshot under `./.devx/ui-gallery/{phase}/` and a `gallery.md`
   entry; transient debug shots in `.devx/cache/browser/` were `Read`/analyzed then deleted.
 - The script is saved, parameterized, and free of inline secrets.
+- Product Interface Direction/inheritance was identified; desktop/mobile (or desktop standard/cramped)
+  renders and computed values were compared against it with severity-ranked, repairable findings.
 - `.devx/cache/browser/` left free of artifacts from this run; the sanitized gallery left intact.
   START/COMPLETE logged.
 
